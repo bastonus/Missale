@@ -54,6 +54,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlin.math.max
 
+import com.example.ui.theme.GregorianStaffRed
+
 /**
  * Reusable cached paint objects to avoid heap/ashmem allocation overhead during Canvas draw passes.
  */
@@ -91,7 +93,7 @@ fun GregorianScoreView(
     mode: String? = null,
     translation: String? = null,
     modifier: Modifier = Modifier,
-    staffColor: Color = Color(0xFFB71C1C), // Solesmes traditional crimson red staff
+    staffColor: Color = GregorianStaffRed, // Solesmes traditional crimson red staff
     noteColor: Color = MaterialTheme.colorScheme.onSurface,
     textColor: Color = MaterialTheme.colorScheme.onSurface
 ) {
@@ -106,7 +108,7 @@ fun GregorianScoreView(
             .testTag("gregorian_score_card"),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            containerColor = MaterialTheme.colorScheme.surface
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {

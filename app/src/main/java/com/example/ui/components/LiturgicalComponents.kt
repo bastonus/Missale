@@ -69,148 +69,163 @@ fun LiturgicalDayBanner(
             .testTag("liturgical_day_banner"),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+            containerColor = MaterialTheme.colorScheme.surface
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp)
-        ) {
-            // Date Navigation Row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(
-                    onClick = onPreviousDay,
-                    modifier = Modifier.size(36.dp).testTag("prev_day_button")
-                ) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Jour précédent",
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Text(
-                        text = formattedDate,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-
-                IconButton(
-                    onClick = onNextDay,
-                    modifier = Modifier.size(36.dp).testTag("next_day_button")
-                ) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = "Jour suivant",
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(6.dp))
-
-            // Feast Title & Latin Subtitle
-            Text(
-                text = day.title,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.primary
+        Row(modifier = Modifier.fillMaxWidth()) {
+            // Illuminated Liturgical Color Ribbon
+            Box(
+                modifier = Modifier
+                    .width(6.dp)
+                    .height(135.dp)
+                    .background(day.color.composeColor)
             )
-            if (day.latinTitle.isNotEmpty()) {
-                Text(
-                    text = day.latinTitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    fontStyle = FontStyle.Italic,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Liturgical Badges: Class, Color, Season, Kyriale
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp)
             ) {
-                // Color Pill
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = day.color.composeColor,
-                    modifier = Modifier.padding(vertical = 2.dp)
+                // Date Navigation Row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
+                    IconButton(
+                        onClick = onPreviousDay,
+                        modifier = Modifier.size(36.dp).testTag("prev_day_button")
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Jour précédent",
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+
                     Row(
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .background(Color(day.color.textColor), CircleShape)
-                        )
                         Text(
-                            text = day.color.frenchName,
-                            style = MaterialTheme.typography.labelSmall,
+                            text = formattedDate,
+                            style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = Color(day.color.textColor)
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+
+                    IconButton(
+                        onClick = onNextDay,
+                        modifier = Modifier.size(36.dp).testTag("next_day_button")
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = "Jour suivant",
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.primary
                         )
                     }
                 }
 
-                // Liturgical Class Badge
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-                ) {
+                Spacer(modifier = Modifier.height(6.dp))
+
+                // Feast Title & Latin Subtitle
+                Text(
+                    text = day.title,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                if (day.latinTitle.isNotEmpty()) {
                     Text(
-                        text = "Classe ${day.liturgicalClass.romanNumeral}",
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
+                        text = day.latinTitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontStyle = FontStyle.Italic,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
-                // Kyriale Badge
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.secondaryContainer
-                ) {
-                    Text(
-                        text = "Kyriale ${day.suggestedKyriale.romanNumber}",
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer
-                    )
-                }
+                Spacer(modifier = Modifier.height(8.dp))
 
-                Spacer(modifier = Modifier.weight(1f))
-
-                // Date Picker Quick Button
-                IconButton(
-                    onClick = onOpenDatePicker,
-                    modifier = Modifier.size(32.dp).testTag("date_picker_button")
+                // Liturgical Badges: Class, Color, Season, Kyriale
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        Icons.Default.CalendarToday,
-                        contentDescription = "Choisir une date",
-                        modifier = Modifier.size(18.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
+                    // Color Pill
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = day.color.composeColor,
+                        shadowElevation = 1.dp,
+                        modifier = Modifier.padding(vertical = 2.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .background(day.color.composeTextColor, CircleShape)
+                            )
+                            Text(
+                                text = day.color.frenchName,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = day.color.composeTextColor
+                            )
+                        }
+                    }
+
+                    // Liturgical Class Badge
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        modifier = Modifier.padding(vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = "Classe ${day.liturgicalClass.romanNumeral}",
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+
+                    // Kyriale Badge
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.secondaryContainer,
+                        modifier = Modifier.padding(vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = "Kyriale ${day.suggestedKyriale.romanNumber}",
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.weight(1f))
+
+                    // Date Picker Quick Button
+                    IconButton(
+                        onClick = onOpenDatePicker,
+                        modifier = Modifier.size(32.dp).testTag("date_picker_button")
+                    ) {
+                        Icon(
+                            Icons.Default.CalendarToday,
+                            contentDescription = "Choisir une date",
+                            modifier = Modifier.size(18.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
             }
         }
