@@ -126,9 +126,11 @@ fun GregorianScoreView(
     var zoomScale by remember { mutableFloatStateOf(1.0f) }
     var wrapLines by remember { mutableStateOf(true) }
     var useRedStaff by remember { mutableStateOf(true) }
+    var useExsurgeEngine by remember { mutableStateOf(true) }
     var showTranslation by remember { mutableStateOf(true) }
     var showPitchMenu by remember { mutableStateOf(false) }
     var showGabcDialog by remember { mutableStateOf(false) }
+    var showSvgDialog by remember { mutableStateOf(false) }
     var activePlayingNote by remember { mutableStateOf<String?>(null) }
 
     val context = LocalContext.current
@@ -151,99 +153,74 @@ fun GregorianScoreView(
                 .fillMaxWidth()
                 .padding(vertical = 4.dp, horizontal = 2.dp)
         ) {
-            // Header: Part Tag, Title, Mode Badge, and Audio/Display Toolbar
+            // Header Facture: Propers Modern Style (Office Part, Mode & Biblical Reference)
+            val displayTitle = title ?: score.title.ifEmpty { "Chant Grégorien" }
+            val parts = displayTitle.split(" - ", limit = 2)
+            val partName = if (parts.size == 2) parts[0] else score.officePart.ifEmpty { "CHANT" }
+            val chantTitle = if (parts.size == 2) parts[1] else displayTitle
+            val displayMode = mode ?: score.mode
+
+            // Top Facture Line: e.g. "INTROITUS. VIII" and "Ps. 24, 1-3"
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 2.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    modifier = Modifier.weight(1f)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    val displayTitle = title ?: score.title.ifEmpty { "Chant Grégorien" }
-                    val parts = displayTitle.split(" - ", limit = 2)
-
-                    if (parts.size == 2) {
-                        Surface(
-                            shape = RoundedCornerShape(6.dp),
-                            color = RubricRed.copy(alpha = 0.15f),
-                            modifier = Modifier.padding(end = 2.dp)
-                        ) {
-                            Text(
-                                text = parts[0],
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = RubricRed
-                            )
-                        }
+                    Text(
+                        text = partName.uppercase(),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = RubricRed
+                    )
+                    if (displayMode.isNotEmpty()) {
                         Text(
-                            text = parts[1],
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    } else {
-                        Icon(
-                            imageVector = Icons.Default.MusicNote,
-                            contentDescription = null,
-                            tint = currentStaffColor,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Text(
-                            text = displayTitle,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
+                            text = "• Mode $displayMode",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.primary
                         )
                     }
                 }
 
-                // Mode Badge
-                val displayMode = mode ?: score.mode
-                if (displayMode.isNotEmpty()) {
-                    Surface(
-                        shape = RoundedCornerShape(16.dp),
-                        color = MaterialTheme.colorScheme.primaryContainer,
-                        modifier = Modifier.padding(horizontal = 4.dp)
-                    ) {
-                        Text(
-                            text = "Mode $displayMode",
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    }
+                // Scriptural / Biblical Reference (e.g. Ps. 24, 1-3)
+                if (score.commentary.isNotEmpty()) {
+                    Text(
+                        text = score.commentary,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontStyle = FontStyle.Italic,
+                        fontWeight = FontWeight.Medium,
+                        color = RubricRed
+                    )
                 }
             }
 
-            // GABC Book / Commentary Sub-header if available
-            if (score.book.isNotEmpty() || score.commentary.isNotEmpty()) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 2.dp, bottom = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (score.book.isNotEmpty()) {
-                        Text(
-                            text = score.book,
-                            style = MaterialTheme.typography.labelSmall,
-                            fontStyle = FontStyle.Italic,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    if (score.commentary.isNotEmpty()) {
-                        Text(
-                            text = "• ${score.commentary}",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+            // Main Chant Title & Book Source
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = chantTitle,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.weight(1f)
+                )
+
+                if (score.book.isNotEmpty()) {
+                    Text(
+                        text = score.book.take(35) + if (score.book.length > 35) "…" else "",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontStyle = FontStyle.Italic,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
 
@@ -308,6 +285,19 @@ fun GregorianScoreView(
                     )
                 }
 
+                // Official jgabc SVG Generator & Exporter button
+                IconButton(
+                    onClick = { showSvgDialog = true },
+                    modifier = Modifier.size(32.dp).testTag("view_svg_code_button")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ViewStream,
+                        contentDescription = "Voir / Exporter en SVG (jgabc)",
+                        tint = RubricRed,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+
                 // Staff Color Toggle (Red Solesmes / Black)
                 IconButton(
                     onClick = { useRedStaff = !useRedStaff },
@@ -317,6 +307,19 @@ fun GregorianScoreView(
                         imageVector = Icons.Default.Palette,
                         contentDescription = "Couleur des portées",
                         tint = if (useRedStaff) GregorianStaffRed else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+
+                // Engine Toggle: jgabc (Exsurge SVG) / Compose Canvas
+                IconButton(
+                    onClick = { useExsurgeEngine = !useExsurgeEngine },
+                    modifier = Modifier.size(32.dp).testTag("toggle_engine_button")
+                ) {
+                    Icon(
+                        imageVector = if (useExsurgeEngine) Icons.Default.MusicNote else Icons.Default.Palette,
+                        contentDescription = if (useExsurgeEngine) "Moteur jgabc (Exsurge SVG)" else "Moteur Canvas Natif",
+                        tint = if (useExsurgeEngine) RubricRed else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -373,72 +376,85 @@ fun GregorianScoreView(
             val staffHeight = staffLineSpacing * 3
             val systemHeight = staffTopMargin + staffHeight + (32f * zoomScale)
 
-            BoxWithConstraints(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp)
-            ) {
-                val availableWidthPx = with(density) { maxWidth.toPx() }
+            if (useExsurgeEngine) {
+                // Exact Solesmes Gregorian SVG layout rendered via jgabc / exsurge engine
+                ExsurgeChantView(
+                    rawGabc = rawGabc,
+                    useRedStaff = useRedStaff,
+                    zoomScale = zoomScale,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 2.dp)
+                )
+            } else {
+                // Native Jetpack Compose Canvas renderer fallback
+                BoxWithConstraints(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                ) {
+                    val availableWidthPx = with(density) { maxWidth.toPx() }
 
-                if (wrapLines) {
-                    // Multi-line wrapped systems layout
-                    val lines = remember(score, availableWidthPx, baseUnit) {
-                        layoutScoreIntoLines(score, availableWidthPx, baseUnit)
-                    }
+                    if (wrapLines) {
+                        // Multi-line wrapped systems layout
+                        val lines = remember(score, availableWidthPx, baseUnit) {
+                            layoutScoreIntoLines(score, availableWidthPx, baseUnit)
+                        }
 
-                    val totalCanvasHeightPx = lines.size * systemHeight
-                    val totalCanvasHeightDp = with(density) { totalCanvasHeightPx.toDp() }
+                        val totalCanvasHeightPx = lines.size * systemHeight
+                        val totalCanvasHeightDp = with(density) { totalCanvasHeightPx.toDp() }
 
-                    Canvas(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(totalCanvasHeightDp)
-                            .testTag("gregorian_score_canvas_multiline")
-                    ) {
-                        drawMultiLineGregorianScore(
-                            lines = lines,
-                            baseUnit = baseUnit,
-                            staffLineSpacing = staffLineSpacing,
-                            staffTopMargin = staffTopMargin,
-                            systemHeight = systemHeight,
-                            staffColor = currentStaffColor,
-                            noteColor = noteColor,
-                            textColor = textColor,
-                            zoomScale = zoomScale
-                        )
-                    }
-                } else {
-                    // Single horizontal scrolling strip layout
-                    val scrollState = rememberScrollState()
-                    val estimatedWidth = calculateScoreWidth(score, baseUnit)
-                    val canvasWidthDp = with(density) { estimatedWidth.toDp() }
-                    val canvasHeightDp = with(density) { systemHeight.toDp() }
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(scrollState)
-                    ) {
                         Canvas(
                             modifier = Modifier
-                                .height(canvasHeightDp)
-                                .width(canvasWidthDp.coerceAtLeast(340.dp))
-                                .testTag("gregorian_score_canvas_scroll")
+                                .fillMaxWidth()
+                                .height(totalCanvasHeightDp)
+                                .testTag("gregorian_score_canvas_multiline")
                         ) {
-                            val singleLine = ScoreStaffLine(words = score.words, clef = score.clef, nextLineFirstPitch = null)
-                            drawStaffLine(
-                                line = singleLine,
-                                lineIndex = 0,
-                                startY = 0f,
-                                width = size.width,
+                            drawMultiLineGregorianScore(
+                                lines = lines,
                                 baseUnit = baseUnit,
                                 staffLineSpacing = staffLineSpacing,
                                 staffTopMargin = staffTopMargin,
+                                systemHeight = systemHeight,
                                 staffColor = currentStaffColor,
                                 noteColor = noteColor,
                                 textColor = textColor,
                                 zoomScale = zoomScale
                             )
+                        }
+                    } else {
+                        // Single horizontal scrolling strip layout
+                        val scrollState = rememberScrollState()
+                        val estimatedWidth = calculateScoreWidth(score, baseUnit)
+                        val canvasWidthDp = with(density) { estimatedWidth.toDp() }
+                        val canvasHeightDp = with(density) { systemHeight.toDp() }
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(scrollState)
+                        ) {
+                            Canvas(
+                                modifier = Modifier
+                                    .height(canvasHeightDp)
+                                    .width(canvasWidthDp.coerceAtLeast(340.dp))
+                                    .testTag("gregorian_score_canvas_scroll")
+                            ) {
+                                val singleLine = ScoreStaffLine(words = score.words, clef = score.clef, nextLineFirstPitch = null)
+                                drawStaffLine(
+                                    line = singleLine,
+                                    lineIndex = 0,
+                                    startY = 0f,
+                                    width = size.width,
+                                    baseUnit = baseUnit,
+                                    staffLineSpacing = staffLineSpacing,
+                                    staffTopMargin = staffTopMargin,
+                                    staffColor = currentStaffColor,
+                                    noteColor = noteColor,
+                                    textColor = textColor,
+                                    zoomScale = zoomScale
+                                )
+                            }
                         }
                     }
                 }
@@ -521,6 +537,78 @@ fun GregorianScoreView(
             },
             dismissButton = {
                 OutlinedButton(onClick = { showGabcDialog = false }) {
+                    Text("Fermer")
+                }
+            }
+        )
+    }
+
+    // Official jgabc SVG Viewer & Exporter Dialog
+    if (showSvgDialog) {
+        val svgCode = remember(score, useRedStaff) {
+            JgabcSvgGenerator.generateSvg(
+                score = score,
+                width = 750f,
+                staffLineSpacing = 10f,
+                staffColorHex = if (useRedStaff) "#B71C1C" else "#000000",
+                noteColorHex = "#000000",
+                rubricColorHex = "#B71C1C",
+                textColorHex = "#000000"
+            )
+        }
+
+        AlertDialog(
+            onDismissRequest = { showSvgDialog = false },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.ViewStream, contentDescription = null, tint = RubricRed)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Code Vectoriel SVG (jgabc / Gregorio)")
+                }
+            },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 380.dp)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    Text(
+                        text = "Format vectoriel SVG standard compatible jgabc, Inkscape, Illustrator et navigateurs web :",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = svgCode,
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.padding(10.dp)
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        clipboardManager.setText(AnnotatedString(svgCode))
+                        Toast.makeText(context, "Code SVG jgabc copié !", Toast.LENGTH_SHORT).show()
+                        showSvgDialog = false
+                    }
+                ) {
+                    Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Copier SVG")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showSvgDialog = false }) {
                     Text("Fermer")
                 }
             }

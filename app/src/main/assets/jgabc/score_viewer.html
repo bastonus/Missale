@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="la">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>Gregorian Chant Viewer (jgabc / exsurge engine)</title>
+  <style>
+    @font-face {
+      font-family: 'Caeciliae';
+      src: url('Caeciliae-Staffless.ttf') format('truetype');
+    }
+    @font-face {
+      font-family: 'Versiculum';
+      src: url('versiculum.ttf') format('truetype');
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 4px;
+      background-color: transparent;
+      font-family: 'Times New Roman', Georgia, serif;
+      color: #111111;
+      overflow-x: hidden;
+    }
+
+    .dark-mode {
+      color: #E6E1E5;
+    }
+
+    #score-wrapper {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+    }
+
+    svg {
+      display: block;
+      width: 100% !important;
+      height: auto !important;
+      max-width: 100%;
+      overflow: visible;
+    }
+
+    /* Solesmes Gregorian styling */
+    .staff-line {
+      stroke: #B71C1C;
+      stroke-width: 1.2;
+    }
+
+    .dark-mode .staff-line {
+      stroke: #E57373;
+    }
+
+    .rubric {
+      color: #B71C1C;
+      font-weight: bold;
+    }
+  </style>
+  <script src="exsurge.min.js"></script>
+</head>
+<body>
+  <div id="score-wrapper"></div>
+
+  <script>
+    var ctxt = new exsurge.ChantContext();
+    var currentScore = null;
+    var currentRawGabc = "";
+    var currentUseRedStaff = true;
+    var currentDarkMode = false;
+
+    function initContext(isDarkMode, useRedStaff) {
+      currentDarkMode = isDarkMode;
+      currentUseRedStaff = useRedStaff;
+
+      if (isDarkMode) {
+        document.body.classList.add('dark-mode');
+        ctxt.textColor = '#E6E1E5';
+        ctxt.staffColor = useRedStaff ? '#E57373' : '#E6E1E5';
+        ctxt.rubricColor = '#E57373';
+      } else {
+        document.body.classList.remove('dark-mode');
+        ctxt.textColor = '#111111';
+        ctxt.staffColor = useRedStaff ? '#B71C1C' : '#111111';
+        ctxt.rubricColor = '#B71C1C';
+      }
+    }
+
+    function renderScore(gabcString, widthPx, isDarkMode, useRedStaff) {
+      if (!gabcString) return;
+      currentRawGabc = gabcString;
+      initContext(isDarkMode, useRedStaff);
+
+      var container = document.getElementById('score-wrapper');
+      container.innerHTML = '';
+
+      try {
+        var mappings = exsurge.Gabc.createMappingsFromSource(ctxt, gabcString);
+        currentScore = new exsurge.ChantScore(ctxt, mappings, true);
+        
+        var effectiveWidth = (widthPx && widthPx > 100) ? (widthPx - 16) : (window.innerWidth - 16);
+        currentScore.autoWrap = true;
+        currentScore.maxSystemWidth = effectiveWidth;
+
+        currentScore.performLayout(ctxt, function() {
+          container.innerHTML = '';
+          var svgNode = currentScore.createSvgNode(ctxt);
+          container.appendChild(svgNode);
+
+          if (window.AndroidBridge && window.AndroidBridge.onHeightChanged) {
+            window.AndroidBridge.onHeightChanged(document.documentElement.scrollHeight);
+          }
+        });
+      } catch (err) {
+        console.error("Exsurge render error:", err);
+        container.innerHTML = '<div style="color:red;padding:8px;">Erreur de rendu grégorien : ' + err.message + '</div>';
+      }
+    }
+
+    window.addEventListener('resize', function() {
+      if (currentRawGabc) {
+        renderScore(currentRawGabc, window.innerWidth, currentDarkMode, currentUseRedStaff);
+      }
+    });
+  </script>
+</body>
+</html>
