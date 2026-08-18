@@ -49,10 +49,10 @@ jobs:
           cache-read-only: false
 
       - name: Run Unit & Robolectric Tests
-        run: gradle :app:testDebugUnitTest --no-configuration-cache --no-daemon --info --stacktrace
+        run: gradle :app:testDebugUnitTest --no-daemon --stacktrace
 
       - name: Build Debug APK
-        run: gradle :app:assembleDebug --no-configuration-cache --no-daemon --info --stacktrace
+        run: gradle :app:assembleDebug --no-daemon --stacktrace
 
       - name: Upload Test Reports
         if: always()
