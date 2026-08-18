@@ -53,6 +53,7 @@ import androidx.compose.ui.unit.sp
 import com.example.liturgy.data.KyrialeLibrary
 import com.example.liturgy.data.PropersLibrary
 import com.example.liturgy.gabc.GregorianScoreView
+import com.example.ui.theme.RubricRed
 
 @Composable
 fun ChantsScreen(
@@ -94,29 +95,23 @@ commentary: Ps 50: 9;
     ) {
         // Top Header Banner
         item {
-            Card(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
-                )
+                    .padding(vertical = 4.dp, horizontal = 4.dp)
             ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Text(
-                        text = "Graduale & Kyriale Romanum (GABC Officiel)",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = "Format officiel Gregorio / GregoBase avec en-têtes canoniques, notation Solesmes sur 4 lignes, donneur de ton et éditeur interactif.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                Text(
+                    text = "Graduale & Kyriale Romanum (GABC Officiel)",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "Format officiel Gregorio / GregoBase avec en-têtes canoniques, notation Solesmes sur 4 lignes, donneur de ton et éditeur interactif.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
             Spacer(modifier = Modifier.height(4.dp))
         }
@@ -286,9 +281,10 @@ commentary: Ps 50: 9;
                         .padding(vertical = 4.dp),
                     shape = RoundedCornerShape(12.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface
+                        containerColor = MaterialTheme.colorScheme.background
                     ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    border = androidx.compose.foundation.BorderStroke(1.dp, RubricRed.copy(alpha = 0.35f)),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
                         Row(

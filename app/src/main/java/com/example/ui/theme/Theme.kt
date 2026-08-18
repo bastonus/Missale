@@ -7,7 +7,7 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-// Strict Black, White, and Red Dark Theme
+// Strict Black, White, and Red Dark Theme with Unified Background
 private val DarkColorScheme = darkColorScheme(
     primary = RubricRedLight,
     onPrimary = PureWhite,
@@ -15,21 +15,21 @@ private val DarkColorScheme = darkColorScheme(
     onPrimaryContainer = PureWhite,
     secondary = PureWhite,
     onSecondary = PureBlack,
-    secondaryContainer = DarkSurfaceVariant,
+    secondaryContainer = NightBlack,
     onSecondaryContainer = PureWhite,
     tertiary = RubricRedLight,
     onTertiary = PureWhite,
     background = NightBlack,
     onBackground = TextWhite,
-    surface = DarkSurface,
+    surface = NightBlack,
     onSurface = TextWhite,
-    surfaceVariant = DarkSurfaceVariant,
+    surfaceVariant = NightBlack,
     onSurfaceVariant = TextMutedLight,
     outline = DarkBorder,
-    outlineVariant = DarkSurfaceVariant
+    outlineVariant = DarkBorder
 )
 
-// Strict Black, White, and Red Light Theme
+// Strict Black, White, and Red Light Theme with Unified Background
 private val LightColorScheme = lightColorScheme(
     primary = RubricRed,
     onPrimary = PureWhite,
@@ -37,18 +37,18 @@ private val LightColorScheme = lightColorScheme(
     onPrimaryContainer = PureWhite,
     secondary = PureBlack,
     onSecondary = PureWhite,
-    secondaryContainer = WhiteSurfaceVariant,
+    secondaryContainer = PureWhite,
     onSecondaryContainer = PureBlack,
     tertiary = RubricRed,
     onTertiary = PureWhite,
-    background = OffWhite,
+    background = PureWhite,
     onBackground = TextBlack,
-    surface = WhiteSurface,
+    surface = PureWhite,
     onSurface = TextBlack,
-    surfaceVariant = WhiteSurfaceVariant,
+    surfaceVariant = PureWhite,
     onSurfaceVariant = TextMutedDark,
     outline = WhiteBorder,
-    outlineVariant = WhiteSurfaceVariant
+    outlineVariant = WhiteBorder
 )
 
 @Composable

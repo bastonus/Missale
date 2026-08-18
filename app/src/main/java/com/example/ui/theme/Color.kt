@@ -4,7 +4,7 @@ import androidx.compose.ui.graphics.Color
 
 // =========================================================================
 // Strict Liturgical Tri-Color Palette: BLACK • WHITE • RED
-// Inspired by classical Roman Missal (Missale Romanum) and Solesmes typography
+// Unified pure background without unwanted grey patches
 // =========================================================================
 
 // Sacred Liturgical Rubric Reds
@@ -15,20 +15,20 @@ val RubricRedSoft = Color(0xFFFFEBEE)            // Soft light red highlight con
 val RubricRedSoftDark = Color(0xFF2C0A0A)        // Soft dark red highlight container
 val GregorianStaffRed = Color(0xFFB71C1C)        // Solesmes 4-line rubric red staff
 
-// Pure Monochromes (Black & White)
-val PureWhite = Color(0xFFFFFFFF)                // Pure paper white
-val OffWhite = Color(0xFFF9F9F9)                 // Crisp background white
-val WhiteSurface = Color(0xFFFFFFFF)             // Elevated card white
-val WhiteSurfaceVariant = Color(0xFFF2F2F2)      // Subtle light gray surface
-val WhiteBorder = Color(0xFFE0E0E0)              // Crisp hairline border
+// Pure Monochromes (Black & White - Unified Backgrounds)
+val PureWhite = Color(0xFFFFFFFF)                // Pure unified paper white
+val OffWhite = Color(0xFFFFFFFF)                 // Pure background white
+val WhiteSurface = Color(0xFFFFFFFF)             // Unified surface white
+val WhiteSurfaceVariant = Color(0xFFFFFFFF)      // Unified white surface
+val WhiteBorder = Color(0xFFE0E0E0)              // Crisp subtle hairline border
 
 val PureBlack = Color(0xFF000000)                // Pure jet black ink
-val NightBlack = Color(0xFF0D0D0D)               // Deepest black canvas
-val DarkSurface = Color(0xFF161616)              // Elevated dark card
-val DarkSurfaceVariant = Color(0xFF222222)       // Secondary dark surface
-val DarkBorder = Color(0xFF333333)               // Dark theme hairline border
+val NightBlack = Color(0xFF0A0A0A)               // Pure unified black canvas
+val DarkSurface = Color(0xFF0A0A0A)              // Unified dark surface
+val DarkSurfaceVariant = Color(0xFF0A0A0A)       // Unified dark surface
+val DarkBorder = Color(0xFF262626)               // Subtle dark hairline border
 
-val TextBlack = Color(0xFF111111)                // High-contrast deep black text
-val TextMutedDark = Color(0xFF555555)            // Subtle dark gray metadata text
+val TextBlack = Color(0xFF000000)                // High-contrast deep black text
+val TextMutedDark = Color(0xFF444444)            // Subtle dark translation text
 val TextWhite = Color(0xFFFFFFFF)                // High-contrast pure white text
-val TextMutedLight = Color(0xFFB0B0B0)           // Subtle light gray metadata text
+val TextMutedLight = Color(0xFFCCCCCC)           // Subtle light translation text

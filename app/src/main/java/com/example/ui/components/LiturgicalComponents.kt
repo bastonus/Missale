@@ -64,13 +64,14 @@ fun LiturgicalDayBanner(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 6.dp)
+            .padding(horizontal = 8.dp, vertical = 4.dp)
             .testTag("liturgical_day_banner"),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = MaterialTheme.colorScheme.background
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        border = androidx.compose.foundation.BorderStroke(1.dp, RubricRed.copy(alpha = 0.35f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Row(modifier = Modifier.fillMaxWidth()) {
             // Illuminated Liturgical Color Ribbon
@@ -330,133 +331,114 @@ fun LiturgicalItemView(
         }
 
         is LiturgicalItem.BilingualText -> {
-            Card(
+            Column(
                 modifier = modifier
                     .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-                shape = RoundedCornerShape(8.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.5.dp)
+                    .padding(vertical = 4.dp, horizontal = 2.dp)
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(10.dp)
-                ) {
-                    if (item.speaker != null) {
-                        Text(
-                            text = "${item.speaker.symbol} ${item.speaker.label}",
-                            style = MaterialTheme.typography.labelMedium.copy(
-                                fontSize = (12 * fontScale).sp,
-                                fontWeight = FontWeight.Bold
-                            ),
-                            color = RubricRed,
-                            modifier = Modifier.padding(bottom = 2.dp)
-                        )
-                    }
-
-                    // Latin text
+                if (item.speaker != null) {
                     Text(
-                        text = item.latin,
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontSize = (14.5 * fontScale).sp,
-                            lineHeight = (21 * fontScale).sp,
-                            fontFamily = FontFamily.Serif
+                        text = "${item.speaker.symbol} ${item.speaker.label}",
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontSize = (12 * fontScale).sp,
+                            fontWeight = FontWeight.Bold
                         ),
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = RubricRed,
+                        modifier = Modifier.padding(bottom = 2.dp)
                     )
+                }
 
-                    // Vernacular translation (if not in Latin-only mode)
-                    if (language != DisplayLanguage.LATIN_ONLY && item.vernacular.isNotBlank()) {
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = item.vernacular,
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                fontSize = (13 * fontScale).sp,
-                                lineHeight = (18 * fontScale).sp,
-                                fontStyle = FontStyle.Italic
-                            ),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                // Latin text
+                Text(
+                    text = item.latin,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontSize = (14.5 * fontScale).sp,
+                        lineHeight = (21 * fontScale).sp,
+                        fontFamily = FontFamily.Serif
+                    ),
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+
+                // Vernacular translation (if not in Latin-only mode)
+                if (language != DisplayLanguage.LATIN_ONLY && item.vernacular.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = item.vernacular,
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontSize = (13 * fontScale).sp,
+                            lineHeight = (18 * fontScale).sp,
+                            fontStyle = FontStyle.Italic
+                        ),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
         }
 
         is LiturgicalItem.VersicleResponse -> {
-            Card(
+            Column(
                 modifier = modifier
                     .fillMaxWidth()
-                    .padding(vertical = 3.dp),
-                shape = RoundedCornerShape(6.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
-                )
+                    .padding(vertical = 3.dp, horizontal = 2.dp)
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(8.dp)
-                ) {
-                    // Versicle
-                    Row {
+                // Versicle
+                Row {
+                    Text(
+                        text = "℣. ",
+                        fontWeight = FontWeight.Bold,
+                        color = RubricRed,
+                        fontSize = (14 * fontScale).sp
+                    )
+                    Column {
                         Text(
-                            text = "℣. ",
-                            fontWeight = FontWeight.Bold,
-                            color = RubricRed,
-                            fontSize = (14 * fontScale).sp
+                            text = item.versicleLatin,
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontSize = (14 * fontScale).sp,
+                                fontFamily = FontFamily.Serif
+                            ),
+                            color = MaterialTheme.colorScheme.onBackground
                         )
-                        Column {
+                        if (language != DisplayLanguage.LATIN_ONLY) {
                             Text(
-                                text = item.versicleLatin,
-                                style = MaterialTheme.typography.bodyMedium.copy(
-                                    fontSize = (14 * fontScale).sp,
-                                    fontFamily = FontFamily.Serif
-                                )
+                                text = item.versicleVernacular,
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    fontSize = (12.5 * fontScale).sp,
+                                    fontStyle = FontStyle.Italic
+                                ),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                            if (language != DisplayLanguage.LATIN_ONLY) {
-                                Text(
-                                    text = item.versicleVernacular,
-                                    style = MaterialTheme.typography.bodySmall.copy(
-                                        fontSize = (12.5 * fontScale).sp,
-                                        fontStyle = FontStyle.Italic
-                                    ),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
                         }
                     }
+                }
 
-                    Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(3.dp))
 
-                    // Response
-                    Row {
+                // Response
+                Row {
+                    Text(
+                        text = "℟. ",
+                        fontWeight = FontWeight.Bold,
+                        color = RubricRed,
+                        fontSize = (14 * fontScale).sp
+                    )
+                    Column {
                         Text(
-                            text = "℟. ",
-                            fontWeight = FontWeight.Bold,
-                            color = RubricRed,
-                            fontSize = (14 * fontScale).sp
+                            text = item.responseLatin,
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontSize = (14 * fontScale).sp,
+                                fontFamily = FontFamily.Serif
+                            ),
+                            color = MaterialTheme.colorScheme.onBackground
                         )
-                        Column {
+                        if (language != DisplayLanguage.LATIN_ONLY) {
                             Text(
-                                text = item.responseLatin,
-                                style = MaterialTheme.typography.bodyMedium.copy(
-                                    fontSize = (14 * fontScale).sp,
-                                    fontFamily = FontFamily.Serif
-                                )
+                                text = item.responseVernacular,
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    fontSize = (12.5 * fontScale).sp,
+                                    fontStyle = FontStyle.Italic
+                                ),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                            if (language != DisplayLanguage.LATIN_ONLY) {
-                                Text(
-                                    text = item.responseVernacular,
-                                    style = MaterialTheme.typography.bodySmall.copy(
-                                        fontSize = (12.5 * fontScale).sp,
-                                        fontStyle = FontStyle.Italic
-                                    ),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
                         }
                     }
                 }
@@ -474,44 +456,34 @@ fun LiturgicalItemView(
                 )
             } else {
                 // Text-only fallback for chant score
-                Card(
+                Column(
                     modifier = modifier
                         .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    shape = RoundedCornerShape(8.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                    )
+                        .padding(vertical = 4.dp, horizontal = 2.dp)
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(10.dp)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Text(
-                                text = "♪ " + item.title + if (item.mode != null) " (Ton ${item.mode})" else "",
-                                style = MaterialTheme.typography.titleSmall.copy(
-                                    fontSize = (14 * fontScale).sp,
-                                    fontWeight = FontWeight.Bold
-                                ),
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                        if (!item.translation.isNullOrBlank() && language != DisplayLanguage.LATIN_ONLY) {
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = item.translation,
-                                style = MaterialTheme.typography.bodySmall.copy(
-                                    fontSize = (12.5 * fontScale).sp,
-                                    fontStyle = FontStyle.Italic
-                                ),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                        Text(
+                            text = "♪ " + item.title + if (item.mode != null) " (Ton ${item.mode})" else "",
+                            style = MaterialTheme.typography.titleSmall.copy(
+                                fontSize = (14 * fontScale).sp,
+                                fontWeight = FontWeight.Bold
+                            ),
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    if (!item.translation.isNullOrBlank() && language != DisplayLanguage.LATIN_ONLY) {
+                        Spacer(modifier = Modifier.height(3.dp))
+                        Text(
+                            text = item.translation,
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                fontSize = (12.5 * fontScale).sp,
+                                fontStyle = FontStyle.Italic
+                            ),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             }

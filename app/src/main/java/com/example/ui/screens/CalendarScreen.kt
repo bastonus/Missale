@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.liturgy.calendar.LiturgicalCalendar
 import com.example.liturgy.model.LiturgicalDay
+import com.example.ui.theme.RubricRed
 import java.time.LocalDate
 import java.time.Month
 import java.time.format.DateTimeFormatter
@@ -85,16 +86,18 @@ fun CalendarScreen(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 6.dp),
-                shape = RoundedCornerShape(16.dp),
+                    .padding(vertical = 4.dp),
+                shape = RoundedCornerShape(12.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
-                )
+                    containerColor = MaterialTheme.colorScheme.background
+                ),
+                border = androidx.compose.foundation.BorderStroke(1.dp, RubricRed.copy(alpha = 0.35f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 8.dp, vertical = 8.dp),
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -134,13 +137,15 @@ fun CalendarScreen(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 6.dp),
-                shape = RoundedCornerShape(12.dp),
+                    .padding(vertical = 4.dp),
+                shape = RoundedCornerShape(10.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f)
-                )
+                    containerColor = MaterialTheme.colorScheme.background
+                ),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
-                Column(modifier = Modifier.padding(12.dp)) {
+                Column(modifier = Modifier.padding(10.dp)) {
                     Text(
                         text = "Comput Ecclésiastique (Année $year)",
                         style = MaterialTheme.typography.titleSmall,
@@ -158,11 +163,11 @@ fun CalendarScreen(
                                 "• Ier Dimanche de l'Avent : ${advent1.format(DateTimeFormatter.ofPattern("d MMMM", Locale.FRENCH))}",
                         style = MaterialTheme.typography.bodySmall,
                         lineHeight = 18.sp,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
             }
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(4.dp))
         }
 
         // Month Days List
@@ -189,19 +194,23 @@ private fun CalendarDayRow(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 3.dp)
+            .padding(vertical = 2.dp)
             .clickable(onClick = onClick)
             .testTag("calendar_day_${day.date}"),
-        shape = RoundedCornerShape(10.dp),
+        shape = RoundedCornerShape(8.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
+            containerColor = if (isSelected) RubricRed.copy(alpha = 0.12f) else MaterialTheme.colorScheme.background
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected) 3.dp else 1.dp)
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            if (isSelected) RubricRed else MaterialTheme.colorScheme.outline
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(10.dp),
+                .padding(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Day Number & Day Name
