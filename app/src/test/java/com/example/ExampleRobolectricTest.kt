@@ -16,7 +16,7 @@ import java.time.LocalDate
 import java.time.Month
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36])
+@Config(sdk = [34])
 class ExampleRobolectricTest {
 
     @Test

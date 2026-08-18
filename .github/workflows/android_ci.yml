@@ -11,6 +11,8 @@ jobs:
   build:
     name: Build & Test Android App
     runs-on: ubuntu-latest
+    env:
+      GRADLE_OPTS: "-Xmx3584m -Dorg.gradle.jvmargs=-Xmx3584m"
 
     steps:
       - name: Checkout repository
@@ -28,7 +30,7 @@ jobs:
       - name: Accept Android SDK Licenses & Install Platforms
         run: |
           yes | sdkmanager --licenses || true
-          sdkmanager "platforms;android-36" "build-tools;36.0.0" "platform-tools" || true
+          sdkmanager "platforms;android-36" "platforms;android-34" "build-tools;36.0.0" "platform-tools" || true
 
       - name: Prepare Keystore & Environment Secrets
         run: |
@@ -48,10 +50,14 @@ jobs:
           cache-read-only: false
 
       - name: Run Unit & Robolectric Tests
-        run: gradle :app:testDebugUnitTest --no-configuration-cache --no-daemon --stacktrace
+        run: |
+          chmod +x ./gradlew 2>/dev/null || true
+          ./gradlew testDebugUnitTest --no-configuration-cache --no-daemon --stacktrace || gradle :app:testDebugUnitTest --no-configuration-cache --no-daemon --stacktrace
 
       - name: Build Debug APK
-        run: gradle :app:assembleDebug --no-configuration-cache --no-daemon --stacktrace
+        run: |
+          chmod +x ./gradlew 2>/dev/null || true
+          ./gradlew assembleDebug --no-configuration-cache --no-daemon --stacktrace || gradle :app:assembleDebug --no-configuration-cache --no-daemon --stacktrace
 
       - name: Upload Test Reports
         if: always()
