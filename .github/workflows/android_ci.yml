@@ -11,8 +11,6 @@ jobs:
   build:
     name: Build & Test Android App
     runs-on: ubuntu-latest
-    env:
-      GRADLE_OPTS: "-Xmx3584m -Dorg.gradle.jvmargs=-Xmx3584m"
 
     steps:
       - name: Checkout repository
@@ -44,20 +42,17 @@ jobs:
             cp .env.example .env 2>/dev/null || touch .env
           fi
 
-      - name: Setup Gradle
+      - name: Setup Gradle 8.13
         uses: gradle/actions/setup-gradle@v4
         with:
+          gradle-version: '8.13'
           cache-read-only: false
 
       - name: Run Unit & Robolectric Tests
-        run: |
-          chmod +x ./gradlew 2>/dev/null || true
-          ./gradlew testDebugUnitTest --no-configuration-cache --no-daemon --stacktrace || gradle :app:testDebugUnitTest --no-configuration-cache --no-daemon --stacktrace
+        run: gradle :app:testDebugUnitTest --no-configuration-cache --no-daemon --info --stacktrace
 
       - name: Build Debug APK
-        run: |
-          chmod +x ./gradlew 2>/dev/null || true
-          ./gradlew assembleDebug --no-configuration-cache --no-daemon --stacktrace || gradle :app:assembleDebug --no-configuration-cache --no-daemon --stacktrace
+        run: gradle :app:assembleDebug --no-configuration-cache --no-daemon --info --stacktrace
 
       - name: Upload Test Reports
         if: always()
