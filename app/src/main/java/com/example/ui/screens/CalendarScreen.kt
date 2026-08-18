@@ -252,7 +252,7 @@ private fun CalendarDayRow(
                 Icon(
                     Icons.Default.Check,
                     contentDescription = "Sélectionné",
-                    tint = MaterialTheme.colorScheme.primary,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
                     modifier = Modifier.size(20.dp)
                 )
             }

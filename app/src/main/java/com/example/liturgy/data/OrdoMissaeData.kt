@@ -7,13 +7,14 @@ import com.example.liturgy.model.LiturgicalSeason
 import com.example.liturgy.model.Speaker
 
 /**
- * Ordo Missae 1960 (Missale Romanum 1960) with Bilingual Latin-Vernacular text,
- * rubrics in crimson red, versicles/responses, and integrated Gregorian chant scores.
+ * Ordo Missae 1960 (Missale Romanum 1960) with Propers (Propres de la Messe selon jgabc / propers_modern),
+ * Bilingual Latin-Vernacular text, rubrics in crimson red, versicles/responses, and integrated Gregorian chant scores.
  */
 object OrdoMissaeData {
 
     fun generateOrdoMissae(day: LiturgicalDay, kyriale: KyrialeSetting): List<LiturgicalItem> {
         val items = mutableListOf<LiturgicalItem>()
+        val propers = PropersLibrary.getForDay(day.latinTitle, day.season)
 
         // 1. Asperges me / Vidi aquam (Sundays)
         if (day.isSunday) {
@@ -118,9 +119,15 @@ object OrdoMissaeData {
             )
         )
 
-        // 3. Introitus & Kyriale
-        items.add(LiturgicalItem.HeaderSection("Introitus & Kyrie", "Introït & Kyrie eleison"))
-        items.add(LiturgicalItem.Rubric("Kyriale praescriptum pro hoc die: " + kyriale.title))
+        // 3. Propre : Introitus
+        items.add(LiturgicalItem.HeaderSection("Introitus (Proprium Missae)", "Introït (Propre de la Messe)"))
+        if (propers != null) {
+            items.add(propers.introit.toLiturgicalItem())
+        }
+
+        // 4. Kyriale
+        items.add(LiturgicalItem.HeaderSection("Kyrie eleison", "Kyrie (Ordinaire de la Messe)"))
+        items.add(LiturgicalItem.Rubric("Kyriale: " + kyriale.title))
 
         val kyrieChant = when (kyriale) {
             KyrialeSetting.KYRIALE_I -> KyrialeLibrary.kyrieLuxEtOrigo
@@ -138,7 +145,7 @@ object OrdoMissaeData {
             )
         )
 
-        // 4. Gloria in excelsis (omitted in Advent/Lent and Requiem)
+        // 5. Gloria in excelsis (omitted in Advent/Lent and Requiem)
         if (day.season != LiturgicalSeason.ADVENT && day.season != LiturgicalSeason.LENT &&
             day.season != LiturgicalSeason.SEPTUAGESIMA && kyriale != KyrialeSetting.REQUIEM
         ) {
@@ -170,7 +177,7 @@ object OrdoMissaeData {
             )
         }
 
-        // 5. Collecta, Epistola, Evangelium
+        // 6. Collecta, Epistola
         items.add(LiturgicalItem.HeaderSection("Liturgia Verbi", "Liturgie de la Parole"))
         items.add(
             LiturgicalItem.VersicleResponse(
@@ -182,13 +189,23 @@ object OrdoMissaeData {
         )
         items.add(
             LiturgicalItem.BilingualText(
-                latin = "Orémus.\nDeus, qui ineffábili providéntia beátum Joseph sanctíssimae Genetrícis tuae Sponsum elígere dignátus es : praesta, quaésumus ; ut quem protectórem venerámur in terris, intercessórem habére mereámur in caelis : Qui vivis et regnas cum Deo Patre in unitáte Spíritus Sancti Deus, per ómnia saécula saeculórum. Amen.",
-                vernacular = "Prions.\nÔ Dieu, qui par une ineffable providence avez daigné choisir le bienheureux Joseph pour être l'Époux de votre très sainte Mère, accordez-nous, nous vous en prions, d'avoir pour intercesseur dans le ciel celui que nous vénérons sur la terre comme notre protecteur. Vous qui vivez et régnez avec Dieu le Père en l'unité du Saint-Esprit, Dieu, pour tous les siècles des siècles. Amen.",
+                latin = "Orémus.\nDeus, qui hodiérna die per Unigénitum tuum, aeternitátis nobis áditum devícta morte reserásti : vota nostra, quae praeveniéndo aspíras, étiam adjuvándo proséquere. Per eúmdem Dóminum nostrum Jesum Christum Fílium tuum, qui tecum vivit et regnat in unitáte Spíritus Sancti Deus, per ómnia saécula saeculórum. Amen.",
+                vernacular = "Prions.\nÔ Dieu, qui en ce jour, par votre Fils unique vainqueur de la mort, nous avez ouvert l'accès de l'éternité, secondez par votre grâce les désirs que vous nous inspirez. Par le même Jésus-Christ, votre Fils, notre Seigneur, qui vit et règne avec vous en l'unité du Saint-Esprit, Dieu, pour tous les siècles des siècles. Amen.",
                 speaker = Speaker.CELEBRANT
             )
         )
 
-        // 6. Credo
+        // 7. Propre : Graduale & Alleluia / Tractus / Sequentia
+        items.add(LiturgicalItem.HeaderSection("Graduale & Alleluia (Proprium Missae)", "Graduel & Alléluia / Trait / Séquence (Propre)"))
+        if (propers != null) {
+            items.add(propers.gradual.toLiturgicalItem())
+            items.add(propers.alleluiaOrTract.toLiturgicalItem())
+            if (propers.sequence != null) {
+                items.add(propers.sequence.toLiturgicalItem())
+            }
+        }
+
+        // 8. Credo
         items.add(LiturgicalItem.HeaderSection("Credo", "Symbole des Apôtres de Nicée-Constantinople"))
         items.add(
             LiturgicalItem.ChantScore(
@@ -199,8 +216,12 @@ object OrdoMissaeData {
             )
         )
 
-        // 7. Offertorium
-        items.add(LiturgicalItem.HeaderSection("Offertorium", "Offertoire"))
+        // 9. Propre : Offertorium
+        items.add(LiturgicalItem.HeaderSection("Offertorium (Proprium Missae)", "Offertoire (Chant du Propre)"))
+        if (propers != null) {
+            items.add(propers.offertory.toLiturgicalItem())
+        }
+
         items.add(LiturgicalItem.Rubric("Sacerdos offert hostiam dicens:"))
         items.add(
             LiturgicalItem.BilingualText(
@@ -210,16 +231,8 @@ object OrdoMissaeData {
                 dropCap = true
             )
         )
-        items.add(LiturgicalItem.Rubric("Immittit vinum et aquam in calicem, benedicens:"))
-        items.add(
-            LiturgicalItem.BilingualText(
-                latin = "Deus, ✠ qui humánae substántiae dignitátem mirabíliter condidísti, et mirabílius reformásti : da nobis per hujus aquae et vini mystérium, ejus divinitátis esse consórtes, qui humanitátis nostrae fíeri dignátus est párticeps, Jesus Christus Fílius tuus Dóminus noster.",
-                vernacular = "Ô Dieu, ✠ qui as créé admirablement la dignité de la nature humaine et l'as relevée plus admirablement encore, accorde-nous par le mystère de cette eau et de ce vin d'avoir part à la divinité de Celui qui a daigné partager notre humanité, Jésus-Christ, ton Fils, notre Seigneur.",
-                speaker = Speaker.CELEBRANT
-            )
-        )
 
-        // 8. Canon Missae
+        // 10. Canon Missae
         items.add(LiturgicalItem.HeaderSection("Canon Missae", "Canon de la Messe"))
         items.add(LiturgicalItem.Rubric("Sacerdos, extensis et elevatis manibus, iunctis et capite inclinato, incipit:"))
         items.add(
@@ -250,7 +263,7 @@ object OrdoMissaeData {
             )
         )
 
-        // 9. Sanctus & Agnus Dei
+        // 11. Sanctus & Agnus Dei
         items.add(LiturgicalItem.HeaderSection("Sanctus & Agnus Dei", "Sanctus & Agneau de Dieu"))
         val sanctusChant = KyrialeLibrary.sanctusDeAngelis
         items.add(
@@ -272,7 +285,13 @@ object OrdoMissaeData {
             )
         )
 
-        // 10. Ultimum Evangelium (St John 1:1-14)
+        // 12. Propre : Communio
+        items.add(LiturgicalItem.HeaderSection("Communio (Proprium Missae)", "Communion (Chant du Propre)"))
+        if (propers != null) {
+            items.add(propers.communion.toLiturgicalItem())
+        }
+
+        // 13. Ultimum Evangelium (St John 1:1-14)
         items.add(LiturgicalItem.HeaderSection("Ultimum Evangelium (Joann 1, 1-14)", "Dernier Évangile selon saint Jean"))
         items.add(
             LiturgicalItem.BilingualText(

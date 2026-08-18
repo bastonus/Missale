@@ -279,7 +279,13 @@ Gló(h)ri(h)a(h) Pa(ixhi)tri,(h) et(h) Fí(gh)li(g)o,(g.) (;) et(g) Spi(g)rí(h)
                     LiturgicalItem.ChantScore(
                         title = "Alma Redemptoris Mater",
                         mode = "V",
-                        gabc = """(c3) AL(f)ma(e) * Red(fh)emp(h)tó(h)ris(h) Ma(fe)ter,(f.) (;) quae(h) pér(h!ij)vi(i)a(h) cae(hi)li(h) por(fe)ta(f) ma(e.)nes,(e.) (:) et(f) stel(e)la(d) ma(ef)ris,(f.) (;) suc(h)cúr(hg)re(f) ca(gh)dén(f)ti(e.) (;) súr(f)ge(e)re(d) qui(ef) cu(f)rat(e) pó(d)pu(cd)lo :(d.) (::)
+                        gabc = """name: Alma Redemptoris Mater;
+office-part: Antiphona;
+mode: 5;
+book: Antiphonale Monasticum, 1934, p. 176 & The Liber Usualis, 1961, p. 273;
+transcriber: Andrew Hinkley;
+%%
+(c3) AL(f)ma(e) * Red(fh)emp(h)tó(h)ris(h) Ma(fe)ter,(f.) (;) quae(h) pér(h!ij)vi(i)a(h) cae(hi)li(h) por(fe)ta(f) ma(e.)nes,(e.) (:) et(f) stel(e)la(d) ma(ef)ris,(f.) (;) suc(h)cúr(hg)re(f) ca(gh)dén(f)ti(e.) (;) súr(f)ge(e)re(d) qui(ef) cu(f)rat(e) pó(d)pu(cd)lo :(d.) (::)
 Tu(h) quae(h!ij) ge(i)nu(h)ís(hi)ti,(h.) (;) na(h)tú(fe)ra(f) mi(hg)rán(f)te,(e.) (;) tu(f)um(e) sanc(d)tum(ef) Ge(f)ni(e)tó(d.)rem :(d.) (::)
 Vir(h!ij)go(i) pri(hg)us(f) ac(gh) pos(f)té(e)ri(f)us,(h.) (;) Ga(h)bri(h)é(fe)lis(f) ab(h) o(h!ij)re(i.) (;) su(h)mens(g) il(fe)lud(f) A(hg)ve,(f.) (;) pec(h)ca(g)tó(f)rum(e) mi(f)se(h)ré(fe)re.(d.) (::)""",
                         translation = "Sainte Mère du Rédempteur, Porte du ciel toujours ouverte, Étoile de la mer, viens au secours du peuple qui tombe et cherche à se relever."
@@ -291,7 +297,13 @@ Vir(h!ij)go(i) pri(hg)us(f) ac(gh) pos(f)té(e)ri(f)us,(h.) (;) Ga(h)bri(h)é(fe
                     LiturgicalItem.ChantScore(
                         title = "Ave Regina Caelorum",
                         mode = "VI",
-                        gabc = """(c4) A(f)ve(e) Re(d)gí(c)na(d) cae(f)ló(g)rum,(f.) *(;) A(h)ve(j) Dó(ixi)mi(h)na(g) An(h)ge(g)ló(f)rum :(h.) (:) Sal(f)ve(e) ra(d)dix,(c) sal(d)ve(f) por(g)ta,(f.) (;) Ex(h) qua(g) mun(f)do(e) lux(g) est(fe) or(d.)ta :(d.) (::)
+                        gabc = """name: Ave Regina Caelorum;
+office-part: Antiphona;
+mode: 6;
+book: Antiphonale Monasticum, 1934, p. 177 & The Liber Usualis, 1961, p. 274;
+transcriber: Andrew Hinkley;
+%%
+(c4) A(f)ve(e) Re(d)gí(c)na(d) cae(f)ló(g)rum,(f.) *(;) A(h)ve(j) Dó(ixi)mi(h)na(g) An(h)ge(g)ló(f)rum :(h.) (:) Sal(f)ve(e) ra(d)dix,(c) sal(d)ve(f) por(g)ta,(f.) (;) Ex(h) qua(g) mun(f)do(e) lux(g) est(fe) or(d.)ta :(d.) (::)
 Gau(f)de(f) Vir(gh)go(h) glo(g)ri(h)ó(ixi)sa,(h.) (;) Su(j)per(ixi) om(h)nes(g) spe(f)ci(e)ó(g)sa :(h.) (:) Va(f)le,(e) o(d) val(c)de(d) de(f)có(g)ra,(f.) (;) Et(h) pro(g) no(fe)bis(d) Chris(g)tum(fe) ex(c)ó(d.)ra.(d.) (::)""",
                         translation = "Salut, Reine des cieux ! Salut, Souveraine des Anges ! Salut, tige de Jessé ! Salut, porte par qui la lumière s'est levée sur le monde !"
                     )
@@ -302,7 +314,13 @@ Gau(f)de(f) Vir(gh)go(h) glo(g)ri(h)ó(ixi)sa,(h.) (;) Su(j)per(ixi) om(h)nes(g)
                     LiturgicalItem.ChantScore(
                         title = "Regina Caeli (Temps Pascal)",
                         mode = "VI",
-                        gabc = """(c4) RE(f)gí(g)na(h) cae(ixi)li(h.) * lae(g)tá(h)re,(f.) al(g)le(h)lú(g.)ia :(f.) (;) Qui(f)a(j) quem(j) me(ixi)ru(h)ís(g)ti(h) por(ixi)tá(h.)re,(f.) (;) al(g)le(h)lú(g.)ia :(f.) (:)
+                        gabc = """name: Regina caeli;
+office-part: Antiphona;
+mode: 6;
+book: Antiphonale Monasticum, 1934, p. 179 & The Liber Usualis, 1961, p. 275;
+transcriber: Andrew Hinkley;
+%%
+(c4) RE(f)gí(g)na(h) cae(ixi)li(h.) * lae(g)tá(h)re,(f.) al(g)le(h)lú(g.)ia :(f.) (;) Qui(f)a(j) quem(j) me(ixi)ru(h)ís(g)ti(h) por(ixi)tá(h.)re,(f.) (;) al(g)le(h)lú(g.)ia :(f.) (:)
 Re(j)sur(j)réx(ixi)it,(h) sic(g)ut(f) dix(g)it,(h.) al(g)le(h)lú(g.)ia :(f.) (;) O(j)ra(j) pro(ixi) no(h)bis(g) De(ixi)um,(h.) (;) al(g)le(f)lú(ixghGF~)(g)ia.(f.) (::)""",
                         translation = "Reine du ciel, réjouis-toi, alléluia ! Car celui que tu as mérité de porter, alléluia, est ressuscité comme il l'avait dit, alléluia ! Prie Dieu pour nous, alléluia !"
                     )
@@ -313,7 +331,13 @@ Re(j)sur(j)réx(ixi)it,(h) sic(g)ut(f) dix(g)it,(h.) al(g)le(h)lú(g.)ia :(f.) (
                     LiturgicalItem.ChantScore(
                         title = "Salve Regina (Ton simple)",
                         mode = "V",
-                        gabc = """(c4) SAl(c)ve(e) Re(g)gí(h)na,(g.) * ma(h)ter(j) mi(i)se(h)ri(g)cór(h)di(g)ae :(g.) (;) Vi(j)ta,(g) dul(h)cé(f)do,(e.) et(d) spes(e) nos(f)tra,(ed) sal(c.)ve.(c.) (::)
+                        gabc = """name: Salve Regina;
+office-part: Antiphona;
+mode: 5;
+book: Antiphonale Monasticum, 1934, p. 179 & The Liber Usualis, 1961, p. 276;
+transcriber: Andrew Hinkley;
+%%
+(c4) SAl(c)ve(e) Re(g)gí(h)na,(g.) * ma(h)ter(j) mi(i)se(h)ri(g)cór(h)di(g)ae :(g.) (;) Vi(j)ta,(g) dul(h)cé(f)do,(e.) et(d) spes(e) nos(f)tra,(ed) sal(c.)ve.(c.) (::)
 Ad(g) te(h) cla(i)má(j)mus,(g.) éx(h)su(i)les(j) fí(h)li(g)i(f) He(g)vae.(g.) (::)
 Ad(j) te(g) sus(h)pi(f)rá(g)mus,(h.) ge(d)mén(f)tes(g) et(f) flen(ed)tes(e.) in(d) hac(c) la(d)cri(e)má(f)rum(ed) val(c.)le.(c.) (::)
 E(g)ia(h) er(i)go,(j) Ad(h)vo(g)cá(h)ta(j) nos(i)tra,(h.) il(j)los(g) tu(h)os(f) mi(e)se(d)ri(e)cór(f)des(ed) ó(c)cu(d)los(e) ad(f) nos(ed) con(c)vér(d.)te.(c.) (::)

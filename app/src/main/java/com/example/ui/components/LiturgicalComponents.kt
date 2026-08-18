@@ -41,7 +41,6 @@ import com.example.liturgy.gabc.GregorianScoreView
 import com.example.liturgy.model.LiturgicalDay
 import com.example.liturgy.model.LiturgicalItem
 import com.example.liturgy.model.Speaker
-import com.example.ui.theme.LiturgicalGold
 import com.example.ui.theme.RubricRed
 import com.example.ui.viewmodel.DisplayLanguage
 import java.time.format.DateTimeFormatter
@@ -289,7 +288,7 @@ fun LiturgicalItemView(
                 HorizontalDivider(
                     modifier = Modifier.width(60.dp),
                     thickness = 1.5.dp,
-                    color = LiturgicalGold
+                    color = RubricRed
                 )
             }
         }

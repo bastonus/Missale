@@ -1,7 +1,9 @@
 package com.example.liturgy.gabc
 
+import android.content.Context
 import android.graphics.Paint
 import android.graphics.Typeface
+import android.widget.Toast
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
@@ -13,22 +15,34 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Code
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.FormatAlignLeft
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material.icons.filled.ViewStream
+import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.material.icons.filled.ZoomOut
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -47,17 +61,23 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import kotlin.math.max
 
 import com.example.ui.theme.GregorianStaffRed
+import com.example.ui.theme.RubricRed
 
 /**
- * Reusable cached paint objects to avoid heap/ashmem allocation overhead during Canvas draw passes.
+ * Reusable cached paint objects to avoid heap allocation overhead during Canvas draw passes.
  */
 private val cachedTextPaint = Paint().apply {
     isAntiAlias = true
@@ -76,15 +96,20 @@ private val cachedAccidentalPaint = Paint().apply {
 data class ScoreStaffLine(
     val words: List<GabcWord>,
     val clef: GabcClef,
-    val nextLineFirstPitch: Int? = null
+    val nextLineFirstPitch: Char? = null
 )
 
 /**
- * High-quality Jetpack Compose Composable for Gregorian Chant (GABC) rendering.
- * Supports:
- * 1. Multi-line wrapped systems (Mode Page / Livre de chant / Solesmes) fitting screen width with Custos (guidon)
- * 2. Horizontal scroll mode
- * 3. Interactive zoom controls
+ * High-quality Jetpack Compose Composable for Gregorian Chant rendering using official Gregorio GABC standards.
+ * Features:
+ * 1. Gregorio GABC compliant rendering with full header parsing (name, office-part, mode, book, commentary).
+ * 2. Official GABC source viewer & copy tool.
+ * 3. Solesmes square notation on 4-line red/black staff.
+ * 4. Multi-line wrapped systems with Custos (guidon).
+ * 5. Horizontal continuous scroll mode.
+ * 6. Pitch Pipe audio tone generator (Do, Re, Mi, Fa, Sol, La, Si).
+ * 7. Dynamic staff color switcher (Rubric Red vs Black ink).
+ * 8. Translation toggle & zoom scaling.
  */
 @Composable
 fun GregorianScoreView(
@@ -93,13 +118,22 @@ fun GregorianScoreView(
     mode: String? = null,
     translation: String? = null,
     modifier: Modifier = Modifier,
-    staffColor: Color = GregorianStaffRed, // Solesmes traditional crimson red staff
+    staffColor: Color = GregorianStaffRed,
     noteColor: Color = MaterialTheme.colorScheme.onSurface,
     textColor: Color = MaterialTheme.colorScheme.onSurface
 ) {
     val score = remember(rawGabc) { GabcParser.parse(rawGabc) }
     var zoomScale by remember { mutableFloatStateOf(1.0f) }
-    var wrapLines by remember { mutableStateOf(true) } // Default: True (Multi-line wrapped page view)
+    var wrapLines by remember { mutableStateOf(true) }
+    var useRedStaff by remember { mutableStateOf(true) }
+    var showTranslation by remember { mutableStateOf(true) }
+    var showPitchMenu by remember { mutableStateOf(false) }
+    var showGabcDialog by remember { mutableStateOf(false) }
+    var activePlayingNote by remember { mutableStateOf<String?>(null) }
+
+    val context = LocalContext.current
+    val clipboardManager = LocalClipboardManager.current
+    val currentStaffColor = if (useRedStaff) GregorianStaffRed else noteColor
 
     Card(
         modifier = modifier
@@ -117,7 +151,7 @@ fun GregorianScoreView(
                 .fillMaxWidth()
                 .padding(12.dp)
         ) {
-            // Header: Title, Mode Badge, Wrap toggle & Zoom controls
+            // Header: Part Tag, Title, Mode Badge, and Audio/Display Toolbar
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -128,67 +162,209 @@ fun GregorianScoreView(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     modifier = Modifier.weight(1f)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.MusicNote,
-                        contentDescription = null,
-                        tint = staffColor,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Text(
-                        text = title ?: score.title.ifEmpty { "Chant Grégorien" },
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
+                    val displayTitle = title ?: score.title.ifEmpty { "Chant Grégorien" }
+                    val parts = displayTitle.split(" - ", limit = 2)
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    val displayMode = mode ?: score.mode
-                    if (displayMode.isNotEmpty()) {
+                    if (parts.size == 2) {
                         Surface(
-                            shape = RoundedCornerShape(16.dp),
-                            color = MaterialTheme.colorScheme.primaryContainer,
-                            modifier = Modifier.padding(end = 4.dp)
+                            shape = RoundedCornerShape(6.dp),
+                            color = RubricRed.copy(alpha = 0.15f),
+                            modifier = Modifier.padding(end = 2.dp)
                         ) {
                             Text(
-                                text = "Ton $displayMode",
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                text = parts[0],
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                                color = RubricRed
                             )
                         }
-                    }
-
-                    // Wrap / Scroll toggle
-                    IconButton(
-                        onClick = { wrapLines = !wrapLines },
-                        modifier = Modifier.size(32.dp).testTag("toggle_wrap_button")
-                    ) {
+                        Text(
+                            text = parts[1],
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    } else {
                         Icon(
-                            imageVector = if (wrapLines) Icons.Default.FormatAlignLeft else Icons.Default.ViewStream,
-                            contentDescription = if (wrapLines) "Mode page (portées enveloppées)" else "Mode défilement horizontal",
-                            modifier = Modifier.size(18.dp),
-                            tint = if (wrapLines) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            imageVector = Icons.Default.MusicNote,
+                            contentDescription = null,
+                            tint = currentStaffColor,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Text(
+                            text = displayTitle,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
                         )
                     }
+                }
 
-                    IconButton(
-                        onClick = { zoomScale = (zoomScale - 0.15f).coerceAtLeast(0.75f) },
-                        modifier = Modifier.size(32.dp).testTag("zoom_out_button")
+                // Mode Badge
+                val displayMode = mode ?: score.mode
+                if (displayMode.isNotEmpty()) {
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        modifier = Modifier.padding(horizontal = 4.dp)
                     ) {
-                        Icon(Icons.Default.ZoomOut, contentDescription = "Zoom out", modifier = Modifier.size(18.dp))
-                    }
-                    IconButton(
-                        onClick = { zoomScale = (zoomScale + 0.15f).coerceAtMost(1.6f) },
-                        modifier = Modifier.size(32.dp).testTag("zoom_in_button")
-                    ) {
-                        Icon(Icons.Default.ZoomIn, contentDescription = "Zoom in", modifier = Modifier.size(18.dp))
+                        Text(
+                            text = "Mode $displayMode",
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            // GABC Book / Commentary Sub-header if available
+            if (score.book.isNotEmpty() || score.commentary.isNotEmpty()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 2.dp, bottom = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (score.book.isNotEmpty()) {
+                        Text(
+                            text = score.book,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontStyle = FontStyle.Italic,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    if (score.commentary.isNotEmpty()) {
+                        Text(
+                            text = "• ${score.commentary}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
+            // Interactive Tool Bar (Pitch Pipe, Official GABC Code, Color, Wrap, Translation, Zoom)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Pitch Pipe Tone Generator
+                Box {
+                    IconButton(
+                        onClick = { showPitchMenu = !showPitchMenu },
+                        modifier = Modifier.size(32.dp).testTag("pitch_pipe_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.VolumeUp,
+                            contentDescription = "Donner le ton",
+                            tint = if (activePlayingNote != null) RubricRed else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+
+                    DropdownMenu(
+                        expanded = showPitchMenu,
+                        onDismissRequest = { showPitchMenu = false }
+                    ) {
+                        Text(
+                            text = "Donneur de ton (Pitch pipe)",
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        PitchPlayer.notes.forEach { (name, freq) ->
+                            DropdownMenuItem(
+                                text = { Text(name) },
+                                onClick = {
+                                    activePlayingNote = name
+                                    PitchPlayer.playTone(freq, 2000) {
+                                        activePlayingNote = null
+                                    }
+                                    showPitchMenu = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+                // Official GABC Code Inspector & Copy button
+                IconButton(
+                    onClick = { showGabcDialog = true },
+                    modifier = Modifier.size(32.dp).testTag("view_gabc_code_button")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Code,
+                        contentDescription = "Voir le code GABC officiel",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+
+                // Staff Color Toggle (Red Solesmes / Black)
+                IconButton(
+                    onClick = { useRedStaff = !useRedStaff },
+                    modifier = Modifier.size(32.dp).testTag("toggle_staff_color_button")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Palette,
+                        contentDescription = "Couleur des portées",
+                        tint = if (useRedStaff) GregorianStaffRed else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+
+                // Translation Toggle
+                if (!translation.isNullOrBlank()) {
+                    IconButton(
+                        onClick = { showTranslation = !showTranslation },
+                        modifier = Modifier.size(32.dp).testTag("toggle_translation_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Translate,
+                            contentDescription = "Afficher/masquer traduction",
+                            tint = if (showTranslation) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+
+                // Wrap / Scroll toggle
+                IconButton(
+                    onClick = { wrapLines = !wrapLines },
+                    modifier = Modifier.size(32.dp).testTag("toggle_wrap_button")
+                ) {
+                    Icon(
+                        imageVector = if (wrapLines) Icons.Default.FormatAlignLeft else Icons.Default.ViewStream,
+                        contentDescription = if (wrapLines) "Mode page (portées enveloppées)" else "Mode défilement horizontal",
+                        modifier = Modifier.size(18.dp),
+                        tint = if (wrapLines) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                // Zoom controls
+                IconButton(
+                    onClick = { zoomScale = (zoomScale - 0.15f).coerceAtLeast(0.75f) },
+                    modifier = Modifier.size(32.dp).testTag("zoom_out_button")
+                ) {
+                    Icon(Icons.Default.ZoomOut, contentDescription = "Zoom out", modifier = Modifier.size(18.dp))
+                }
+                IconButton(
+                    onClick = { zoomScale = (zoomScale + 0.15f).coerceAtMost(1.6f) },
+                    modifier = Modifier.size(32.dp).testTag("zoom_in_button")
+                ) {
+                    Icon(Icons.Default.ZoomIn, contentDescription = "Zoom in", modifier = Modifier.size(18.dp))
+                }
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
 
             val density = LocalDensity.current
             val baseUnit = 11.5f * zoomScale
@@ -204,7 +380,7 @@ fun GregorianScoreView(
                         color = MaterialTheme.colorScheme.surface,
                         shape = RoundedCornerShape(8.dp)
                     )
-                    .padding(8.dp)
+                    .padding(vertical = 4.dp)
             ) {
                 val availableWidthPx = with(density) { maxWidth.toPx() }
 
@@ -229,7 +405,7 @@ fun GregorianScoreView(
                             staffLineSpacing = staffLineSpacing,
                             staffTopMargin = staffTopMargin,
                             systemHeight = systemHeight,
-                            staffColor = staffColor,
+                            staffColor = currentStaffColor,
                             noteColor = noteColor,
                             textColor = textColor,
                             zoomScale = zoomScale
@@ -262,7 +438,7 @@ fun GregorianScoreView(
                                 baseUnit = baseUnit,
                                 staffLineSpacing = staffLineSpacing,
                                 staffTopMargin = staffTopMargin,
-                                staffColor = staffColor,
+                                staffColor = currentStaffColor,
                                 noteColor = noteColor,
                                 textColor = textColor,
                                 zoomScale = zoomScale
@@ -273,16 +449,90 @@ fun GregorianScoreView(
             }
 
             // Translation / Vernacular commentary
-            if (!translation.isNullOrBlank()) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = translation,
-                    style = MaterialTheme.typography.bodySmall,
-                    fontStyle = FontStyle.Italic,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+            if (showTranslation && !translation.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = translation,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontStyle = FontStyle.Italic,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(8.dp)
+                    )
+                }
             }
         }
+    }
+
+    // Official GABC Code Dialog
+    if (showGabcDialog) {
+        val scrollDialog = rememberScrollState()
+        AlertDialog(
+            onDismissRequest = { showGabcDialog = false },
+            title = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Code,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Text("Code GABC officiel (Gregorio)")
+                }
+            },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 400.dp)
+                        .verticalScroll(scrollDialog)
+                ) {
+                    Text(
+                        text = "Format standard officiel compatible avec Gregorio, GregoBase et jgabc :",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = rawGabc,
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.padding(10.dp)
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        clipboardManager.setText(AnnotatedString(rawGabc))
+                        Toast.makeText(context, "Code GABC officiel copié !", Toast.LENGTH_SHORT).show()
+                        showGabcDialog = false
+                    }
+                ) {
+                    Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Copier")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showGabcDialog = false }) {
+                    Text("Fermer")
+                }
+            }
+        )
     }
 }
 
@@ -324,49 +574,34 @@ private fun layoutScoreIntoLines(
         lines.add(ScoreStaffLine(words = currentWords.toList(), clef = score.clef))
     }
 
-    // Compute Custos (guidon) pitch for each line (the pitch of the 1st note of next line)
+    // Set custos target pitch for each line
     return lines.mapIndexed { index, line ->
-        val nextFirstPitch = if (index < lines.size - 1) {
-            findFirstPitchOfLine(lines[index + 1])
+        val nextPitch = if (index < lines.size - 1) {
+            lines[index + 1].words.firstOrNull()?.syllables?.firstOrNull()?.notes?.firstOrNull()?.notes?.firstOrNull()?.pitch
         } else null
-        line.copy(nextLineFirstPitch = nextFirstPitch)
+        line.copy(nextLineFirstPitch = nextPitch)
     }
-}
-
-private fun findFirstPitchOfLine(line: ScoreStaffLine): Int? {
-    for (word in line.words) {
-        for (syllable in word.syllables) {
-            for (cluster in syllable.notes) {
-                if (cluster.notes.isNotEmpty()) {
-                    return cluster.notes.first().pitchIndex
-                }
-            }
-        }
-    }
-    return null
 }
 
 private fun calculateWordWidth(word: GabcWord, baseUnit: Float): Float {
-    var width = 0f
-    for (syllable in word.syllables) {
-        val textWidth = max(syllable.text.length * baseUnit * 0.9f, 20f)
-        val notesWidth = syllable.notes.sumOf { cluster ->
-            max(cluster.notes.size * baseUnit * 1.15, baseUnit * 1.4)
-        }.toFloat()
-        val syllableWidth = max(textWidth, notesWidth) + (if (syllable.barLine != null) baseUnit * 2.2f else baseUnit * 1.0f)
-        width += syllableWidth
-    }
-    return width
+    return word.syllables.sumOf { syl ->
+        val noteCount = syl.notes.sumOf { it.notes.size }
+        val noteWidth = noteCount * (baseUnit * 1.4)
+        val barWidth = if (syl.barLine != null) baseUnit * 2.0 else 0.0
+        val textWidth = max(syl.cleanText.length * baseUnit * 0.9, baseUnit * 1.6)
+        max(noteWidth + barWidth, textWidth) + (baseUnit * 0.6)
+    }.toFloat()
 }
 
 private fun calculateScoreWidth(score: GabcScore, baseUnit: Float): Float {
-    var width = 80f * (baseUnit / 11.5f) // Initial clef space
-    for (word in score.words) {
-        width += calculateWordWidth(word, baseUnit) + (baseUnit * 1.4f)
-    }
-    return max(width + 80f, 600f)
+    val clefWidth = baseUnit * 5.0f
+    val wordsWidth = score.words.sumOf { calculateWordWidth(it, baseUnit).toDouble() }.toFloat()
+    return clefWidth + wordsWidth + (baseUnit * 4f)
 }
 
+/**
+ * Draws all wrapped lines sequentially down the Canvas.
+ */
 private fun DrawScope.drawMultiLineGregorianScore(
     lines: List<ScoreStaffLine>,
     baseUnit: Float,
@@ -378,12 +613,12 @@ private fun DrawScope.drawMultiLineGregorianScore(
     textColor: Color,
     zoomScale: Float
 ) {
-    lines.forEachIndexed { index, staffLine ->
-        val lineStartY = index * systemHeight
+    lines.forEachIndexed { index, line ->
+        val startY = index * systemHeight
         drawStaffLine(
-            line = staffLine,
+            line = line,
             lineIndex = index,
-            startY = lineStartY,
+            startY = startY,
             width = size.width,
             baseUnit = baseUnit,
             staffLineSpacing = staffLineSpacing,
@@ -396,6 +631,9 @@ private fun DrawScope.drawMultiLineGregorianScore(
     }
 }
 
+/**
+ * Renders a single 4-line staff system with its clef, neumes, lyrics, and optional Custos.
+ */
 private fun DrawScope.drawStaffLine(
     line: ScoreStaffLine,
     lineIndex: Int,
@@ -410,299 +648,363 @@ private fun DrawScope.drawStaffLine(
     zoomScale: Float
 ) {
     val staffTop = startY + staffTopMargin
-    val lineStroke = (1.4f * zoomScale).coerceAtLeast(1f)
+    val staffLineWidth = 1.6f * zoomScale
 
-    // 1. Draw 4 Red Staff Lines across the width
+    // 1. Draw 4 Red Staff Lines (portée à 4 lignes de Solesmes)
     for (i in 0..3) {
         val y = staffTop + (i * staffLineSpacing)
         drawLine(
             color = staffColor,
-            start = Offset(6f, y),
-            end = Offset(width - 6f, y),
-            strokeWidth = lineStroke
+            start = Offset(0f, y),
+            end = Offset(width, y),
+            strokeWidth = staffLineWidth
         )
     }
 
-    var cursorX = 14f * zoomScale
+    // 2. Draw Clef (Do clef / Fa clef)
+    val clefX = baseUnit * 0.8f
+    drawClef(line.clef, clefX, staffTop, staffLineSpacing, baseUnit, noteColor)
 
-    // 2. Draw Clef at the beginning of each staff line
-    drawClef(
-        clef = line.clef,
-        x = cursorX,
-        staffTop = staffTop,
-        staffLineSpacing = staffLineSpacing,
-        color = noteColor,
-        baseUnit = baseUnit
-    )
-    cursorX += baseUnit * 3.8f
-
-    // 3. Draw Words, Syllables, Notes, and Bar lines
-    val noteSize = baseUnit * 0.82f
-
-    // Configure cached text paint
-    val textColorArgb = textColor.toArgb()
-    cachedTextPaint.color = textColorArgb
-    cachedTextPaint.textSize = 13.5f * zoomScale
-
-    cachedAccidentalPaint.color = noteColor.toArgb()
-    cachedAccidentalPaint.textSize = noteSize * 1.5f
+    // 3. Draw Words and Syllables
+    var currentX = clefX + (baseUnit * 3.8f)
 
     for (word in line.words) {
         for (syllable in word.syllables) {
-            val syllableStartX = cursorX
+            val totalNotesInSyllable = syllable.notes.sumOf { it.notes.size }
+            val noteBlockWidth = max(totalNotesInSyllable * (baseUnit * 1.5f), baseUnit * 1.6f)
+            val barWidth = if (syllable.barLine != null) (baseUnit * 1.8f) else 0f
+            val textWidth = max(syllable.cleanText.length * baseUnit * 0.9f, baseUnit * 1.6f)
+            val syllableWidth = max(noteBlockWidth + barWidth, textWidth) + (baseUnit * 0.6f)
 
-            // Draw notes/neumes in this syllable
-            var noteCursorX = cursorX
+            // Draw Note Clusters
+            var noteX = currentX + (baseUnit * 0.2f)
             for (cluster in syllable.notes) {
-                drawNeumeCluster(
+                drawGabcCluster(
                     cluster = cluster,
-                    x = noteCursorX,
+                    x = noteX,
                     staffTop = staffTop,
                     staffLineSpacing = staffLineSpacing,
-                    noteColor = noteColor,
-                    noteSize = noteSize,
-                    baseUnit = baseUnit
+                    baseUnit = baseUnit,
+                    noteColor = noteColor
                 )
-                noteCursorX += max(cluster.notes.size * baseUnit * 1.1f, baseUnit * 1.3f)
+                noteX += cluster.notes.size * (baseUnit * 1.45f)
             }
 
-            // Draw Bar Line if present
+            // Draw Bar Line if any
             if (syllable.barLine != null) {
                 drawBarLine(
                     barLine = syllable.barLine,
-                    x = cursorX + (baseUnit * 0.8f),
+                    x = noteX + (baseUnit * 0.4f),
                     staffTop = staffTop,
                     staffLineSpacing = staffLineSpacing,
-                    color = noteColor,
-                    strokeWidth = 2f * zoomScale
-                )
-                cursorX += baseUnit * 2.2f
-            }
-
-            // Draw Syllable Text below staff
-            if (syllable.text.isNotEmpty()) {
-                val textY = staffTop + (staffLineSpacing * 3) + (20f * zoomScale)
-                drawContext.canvas.nativeCanvas.drawText(
-                    syllable.text,
-                    syllableStartX,
-                    textY,
-                    cachedTextPaint
+                    baseUnit = baseUnit,
+                    color = noteColor
                 )
             }
 
-            cursorX = max(noteCursorX, syllableStartX + (syllable.text.length * baseUnit * 0.82f)) + (baseUnit * 0.85f)
+            // Draw Cleaned Lyrics / Syllable Text below staff
+            if (syllable.cleanText.isNotEmpty()) {
+                val lyricsY = staffTop + (3.8f * staffLineSpacing) + (16f * zoomScale)
+                val isRubricSymbol = syllable.cleanText.startsWith("℣.") ||
+                        syllable.cleanText.startsWith("℟.") ||
+                        syllable.cleanText.startsWith("Ant.") ||
+                        syllable.cleanText == "*" ||
+                        syllable.cleanText.contains("ij.")
+                val isInitialWordFirstLetter = lineIndex == 0 && currentX == clefX + (baseUnit * 3.8f)
+
+                drawContext.canvas.nativeCanvas.apply {
+                    cachedTextPaint.color = when {
+                        isRubricSymbol -> RubricRed.toArgb()
+                        isInitialWordFirstLetter -> RubricRed.toArgb()
+                        else -> textColor.toArgb()
+                    }
+                    cachedTextPaint.isFakeBoldText = isRubricSymbol || isInitialWordFirstLetter
+                    cachedTextPaint.textSize = if (isInitialWordFirstLetter) 16f * zoomScale else 14f * zoomScale
+                    val drawX = currentX + max(0f, (syllableWidth - textWidth) / 4f)
+                    drawText(syllable.cleanText, drawX, lyricsY, cachedTextPaint)
+                    cachedTextPaint.isFakeBoldText = false
+                }
+            }
+
+            currentX += syllableWidth
         }
-        cursorX += baseUnit * 1.2f // Space between words
+        currentX += (baseUnit * 1.0f) // inter-word spacing
     }
 
-    // 4. Draw Custos (guidon) at the right end of the staff line if next line exists
+    // 4. Draw Custos (Guidon) at end of line if there is a next line
     if (line.nextLineFirstPitch != null) {
-        val stepHeight = staffLineSpacing * 0.5f
-        val custosY = staffTop + ((7 - line.nextLineFirstPitch) * stepHeight)
-        val custosX = width - (18f * zoomScale)
-        drawCustos(x = custosX, y = custosY, noteColor = noteColor, baseUnit = baseUnit)
+        val custosX = width - (baseUnit * 2.2f)
+        val custosY = getPitchY(line.nextLineFirstPitch, staffTop, staffLineSpacing)
+        drawCustos(custosX, custosY, baseUnit, noteColor)
     }
 }
 
 /**
- * Draws the traditional Solesmes Custos (guidon) at the end of a staff line.
+ * Calculates vertical Y coordinate for a Gregorian pitch (a..m on 4-line staff).
+ * 'a' is below 1st line, 'c' is line 1, 'e' is line 2, 'g' is line 3, 'i' is line 4, etc.
  */
-private fun DrawScope.drawCustos(
-    x: Float,
-    y: Float,
-    noteColor: Color,
-    baseUnit: Float
-) {
-    val h = baseUnit * 0.7f
-    val w = baseUnit * 0.5f
-    val path = Path().apply {
-        moveTo(x, y)
-        lineTo(x + w, y - (h * 0.6f))
-        lineTo(x + w + 2f, y - (h * 0.6f))
-        lineTo(x + 2f, y + 2f)
-        close()
-    }
-    drawPath(path, color = noteColor, style = Fill)
-    // Small vertical tail
-    drawLine(
-        color = noteColor,
-        start = Offset(x + w, y - (h * 0.6f)),
-        end = Offset(x + w, y - (h * 1.4f)),
-        strokeWidth = 1.6f
-    )
+private fun getPitchY(pitch: Char, staffTop: Float, staffLineSpacing: Float): Float {
+    val pitchIndex = (pitch.lowercaseChar() - 'a').coerceIn(0, 15)
+    val bottomLineY = staffTop + (3 * staffLineSpacing)
+    val halfSpace = staffLineSpacing / 2f
+    // line 1 is pitch index 2 ('c')
+    return bottomLineY - ((pitchIndex - 2) * halfSpace)
 }
 
+/**
+ * Renders Gregorian Clefs (C-clef / Do or F-clef / Fa).
+ */
 private fun DrawScope.drawClef(
     clef: GabcClef,
     x: Float,
     staffTop: Float,
     staffLineSpacing: Float,
-    color: Color,
-    baseUnit: Float
+    baseUnit: Float,
+    color: Color
 ) {
-    val clefY = staffTop + ((4 - clef.line) * staffLineSpacing)
+    val clefLineIndex = 4 - clef.line // 1-based from bottom
+    val clefY = staffTop + (clefLineIndex * staffLineSpacing)
 
     if (clef.type == ClefType.DO) {
-        val halfW = baseUnit * 0.6f
-        val blockH = staffLineSpacing * 0.9f
-
-        // Upper block
-        drawRect(
-            color = color,
-            topLeft = Offset(x, clefY - blockH),
-            size = Size(halfW, blockH * 0.8f)
-        )
-        // Lower block
-        drawRect(
-            color = color,
-            topLeft = Offset(x, clefY + (blockH * 0.2f)),
-            size = Size(halfW, blockH * 0.8f)
-        )
-        // Connecting vertical bar
+        // C-Clef: Classical Gregorian C-clef glyph
+        val path = Path().apply {
+            moveTo(x, clefY - (baseUnit * 0.7f))
+            lineTo(x + (baseUnit * 0.8f), clefY - (baseUnit * 0.7f))
+            lineTo(x + (baseUnit * 0.8f), clefY - (baseUnit * 0.2f))
+            lineTo(x + (baseUnit * 0.4f), clefY)
+            lineTo(x + (baseUnit * 0.8f), clefY + (baseUnit * 0.2f))
+            lineTo(x + (baseUnit * 0.8f), clefY + (baseUnit * 0.7f))
+            lineTo(x, clefY + (baseUnit * 0.7f))
+            close()
+        }
+        drawPath(path, color)
         drawLine(
             color = color,
-            start = Offset(x + halfW, clefY - blockH),
-            end = Offset(x + halfW, clefY + blockH),
-            strokeWidth = 2.5f
-        )
-        // Left decorative prong
-        drawLine(
-            color = color,
-            start = Offset(x - 3f, clefY - blockH + 3f),
-            end = Offset(x, clefY - blockH),
-            strokeWidth = 2f
+            start = Offset(x + (baseUnit * 0.4f), clefY - (baseUnit * 1.2f)),
+            end = Offset(x + (baseUnit * 0.4f), clefY + (baseUnit * 1.2f)),
+            strokeWidth = baseUnit * 0.35f
         )
     } else {
-        // Fa Clef
-        drawCircle(color = color, radius = baseUnit * 0.4f, center = Offset(x + baseUnit * 0.4f, clefY))
+        // F-Clef
+        drawCircle(
+            color = color,
+            radius = baseUnit * 0.45f,
+            center = Offset(x + (baseUnit * 0.5f), clefY)
+        )
         drawLine(
             color = color,
-            start = Offset(x + baseUnit * 0.8f, clefY - staffLineSpacing),
-            end = Offset(x + baseUnit * 0.8f, clefY + staffLineSpacing),
-            strokeWidth = 2f
+            start = Offset(x + (baseUnit * 0.5f), clefY - (baseUnit * 0.8f)),
+            end = Offset(x + (baseUnit * 0.5f), clefY + (baseUnit * 0.8f)),
+            strokeWidth = baseUnit * 0.3f
         )
     }
 }
 
-private fun DrawScope.drawNeumeCluster(
+/**
+ * Draws a note cluster (Punctum, Podatus, Clivis, Torculus, Porrectus, etc.).
+ */
+private fun DrawScope.drawGabcCluster(
     cluster: GabcNoteCluster,
     x: Float,
     staffTop: Float,
     staffLineSpacing: Float,
-    noteColor: Color,
-    noteSize: Float,
-    baseUnit: Float
+    baseUnit: Float,
+    noteColor: Color
 ) {
-    var curX = x
+    when (cluster.shape) {
+        NeumeShape.PODATUS -> {
+            if (cluster.notes.size >= 2) {
+                val lowerNote = cluster.notes[0]
+                val upperNote = cluster.notes[1]
+                val lowerY = getPitchY(lowerNote.pitch, staffTop, staffLineSpacing)
+                val upperY = getPitchY(upperNote.pitch, staffTop, staffLineSpacing)
+                val noteSize = baseUnit * 0.95f
 
-    for (i in cluster.notes.indices) {
-        val note = cluster.notes[i]
-        val stepHeight = staffLineSpacing * 0.5f
-        val noteY = staffTop + ((7 - note.pitchIndex) * stepHeight)
+                drawRect(color = noteColor, topLeft = Offset(x, lowerY - (noteSize / 2f)), size = Size(noteSize, noteSize))
+                drawRect(color = noteColor, topLeft = Offset(x, upperY - (noteSize / 2f)), size = Size(noteSize, noteSize))
+                drawLine(
+                    color = noteColor,
+                    start = Offset(x + noteSize, upperY),
+                    end = Offset(x + noteSize, lowerY),
+                    strokeWidth = baseUnit * 0.22f
+                )
+                drawDecorations(lowerNote, x, lowerY, baseUnit, noteColor)
+                drawDecorations(upperNote, x, upperY, baseUnit, noteColor)
+                return
+            }
+        }
+        NeumeShape.CLIVIS -> {
+            if (cluster.notes.size >= 2) {
+                val firstNote = cluster.notes[0]
+                val secondNote = cluster.notes[1]
+                val firstY = getPitchY(firstNote.pitch, staffTop, staffLineSpacing)
+                val secondY = getPitchY(secondNote.pitch, staffTop, staffLineSpacing)
+                val noteSize = baseUnit * 0.95f
 
-        if (note.isInclinatum) {
-            // Diamond shape (Punctum Inclinatum)
+                drawRect(color = noteColor, topLeft = Offset(x, firstY - (noteSize / 2f)), size = Size(noteSize, noteSize))
+                drawRect(color = noteColor, topLeft = Offset(x + (noteSize * 1.1f), secondY - (noteSize / 2f)), size = Size(noteSize, noteSize))
+                drawLine(
+                    color = noteColor,
+                    start = Offset(x, firstY),
+                    end = Offset(x, secondY),
+                    strokeWidth = baseUnit * 0.22f
+                )
+                drawDecorations(firstNote, x, firstY, baseUnit, noteColor)
+                drawDecorations(secondNote, x + (noteSize * 1.1f), secondY, baseUnit, noteColor)
+                return
+            }
+        }
+        NeumeShape.PORRECTUS -> {
+            if (cluster.notes.size >= 3) {
+                val n1 = cluster.notes[0]
+                val n2 = cluster.notes[1]
+                val n3 = cluster.notes[2]
+                val y1 = getPitchY(n1.pitch, staffTop, staffLineSpacing)
+                val y2 = getPitchY(n2.pitch, staffTop, staffLineSpacing)
+                val y3 = getPitchY(n3.pitch, staffTop, staffLineSpacing)
+                val noteSize = baseUnit * 0.95f
+
+                // Diagonal bar
+                val path = Path().apply {
+                    moveTo(x, y1 - (noteSize / 2f))
+                    lineTo(x + (noteSize * 1.8f), y2 - (noteSize / 2f))
+                    lineTo(x + (noteSize * 1.8f), y2 + (noteSize / 2f))
+                    lineTo(x, y1 + (noteSize / 2f))
+                    close()
+                }
+                drawPath(path, noteColor)
+                drawRect(color = noteColor, topLeft = Offset(x + (noteSize * 1.8f), y3 - (noteSize / 2f)), size = Size(noteSize, noteSize))
+                drawLine(
+                    color = noteColor,
+                    start = Offset(x + (noteSize * 1.8f), y2),
+                    end = Offset(x + (noteSize * 1.8f), y3),
+                    strokeWidth = baseUnit * 0.22f
+                )
+                return
+            }
+        }
+        else -> {}
+    }
+
+    // Default: draw individual notes
+    var currentNoteX = x
+    for (note in cluster.notes) {
+        drawGabcNote(note, currentNoteX, staffTop, staffLineSpacing, baseUnit, noteColor)
+        currentNoteX += (baseUnit * 1.35f)
+    }
+}
+
+private fun DrawScope.drawGabcNote(
+    note: GabcNote,
+    x: Float,
+    staffTop: Float,
+    staffLineSpacing: Float,
+    baseUnit: Float,
+    noteColor: Color
+) {
+    val y = getPitchY(note.pitch, staffTop, staffLineSpacing)
+    val noteSize = baseUnit * 0.95f
+
+    when {
+        note.isInclinatum -> {
+            // Diamond / Lozenge note
             val path = Path().apply {
-                moveTo(curX + noteSize / 2f, noteY - noteSize / 2f)
-                lineTo(curX + noteSize, noteY)
-                lineTo(curX + noteSize / 2f, noteY + noteSize / 2f)
-                lineTo(curX, noteY)
+                moveTo(x + (noteSize / 2f), y - (noteSize * 0.55f))
+                lineTo(x + noteSize, y)
+                lineTo(x + (noteSize / 2f), y + (noteSize * 0.55f))
+                lineTo(x, y)
                 close()
             }
-            drawPath(path, color = noteColor, style = Fill)
-        } else if (note.isQuilisma) {
-            // Wavy / serrated note
-            val path = Path().apply {
-                moveTo(curX, noteY - noteSize / 2f)
-                lineTo(curX + noteSize * 0.3f, noteY - noteSize * 0.7f)
-                lineTo(curX + noteSize * 0.6f, noteY - noteSize * 0.3f)
-                lineTo(curX + noteSize, noteY - noteSize * 0.6f)
-                lineTo(curX + noteSize, noteY + noteSize * 0.4f)
-                lineTo(curX, noteY + noteSize * 0.4f)
-                close()
-            }
-            drawPath(path, color = noteColor, style = Fill)
-        } else {
-            // Standard Punctum Quadratum (Square note)
+            drawPath(path, noteColor)
+        }
+        note.isQuilisma -> {
             drawRect(
                 color = noteColor,
-                topLeft = Offset(curX, noteY - noteSize / 2f),
+                topLeft = Offset(x, y - (noteSize / 2f)),
+                size = Size(noteSize, noteSize),
+                style = Fill
+            )
+            drawCircle(
+                color = Color.White,
+                radius = noteSize * 0.2f,
+                center = Offset(x + (noteSize * 0.3f), y)
+            )
+        }
+        note.isVirga -> {
+            drawRect(
+                color = noteColor,
+                topLeft = Offset(x, y - (noteSize / 2f)),
                 size = Size(noteSize, noteSize)
             )
-
-            // If Virga (note with right downward stem)
-            if (note.isVirga) {
-                drawLine(
-                    color = noteColor,
-                    start = Offset(curX + noteSize, noteY - noteSize / 2f),
-                    end = Offset(curX + noteSize, noteY + staffLineSpacing * 1.2f),
-                    strokeWidth = 2f
-                )
-            }
-        }
-
-        // Connecting stem for Podatus (ascending) or Clivis (descending)
-        if (i < cluster.notes.size - 1) {
-            val nextNote = cluster.notes[i + 1]
-            val nextNoteY = staffTop + ((7 - nextNote.pitchIndex) * stepHeight)
-
-            if (cluster.shape == NeumeShape.PODATUS) {
-                drawLine(
-                    color = noteColor,
-                    start = Offset(curX + noteSize, noteY),
-                    end = Offset(curX + noteSize, nextNoteY),
-                    strokeWidth = 2f
-                )
-            } else if (cluster.shape == NeumeShape.CLIVIS) {
-                drawLine(
-                    color = noteColor,
-                    start = Offset(curX, noteY),
-                    end = Offset(curX, nextNoteY),
-                    strokeWidth = 2f
-                )
-            }
-        }
-
-        // Punctum Mora (Dot '.')
-        if (note.hasMora) {
-            drawCircle(
-                color = noteColor,
-                radius = noteSize * 0.22f,
-                center = Offset(curX + noteSize + (baseUnit * 0.35f), noteY)
-            )
-        }
-
-        // Horizontal Episema ('_')
-        if (note.hasEpisema) {
             drawLine(
                 color = noteColor,
-                start = Offset(curX - 2f, noteY - (noteSize * 0.8f)),
-                end = Offset(curX + noteSize + 2f, noteY - (noteSize * 0.8f)),
-                strokeWidth = 2f
+                start = Offset(x + noteSize, y - (noteSize / 2f)),
+                end = Offset(x + noteSize, y + (noteSize * 1.6f)),
+                strokeWidth = baseUnit * 0.22f
             )
         }
-
-        // Vertical Episema / Ictus ('\'')
-        if (note.hasIctus) {
-            drawLine(
+        else -> {
+            drawRect(
                 color = noteColor,
-                start = Offset(curX + noteSize / 2f, noteY + (noteSize * 0.7f)),
-                end = Offset(curX + noteSize / 2f, noteY + (noteSize * 1.3f)),
-                strokeWidth = 1.8f
+                topLeft = Offset(x, y - (noteSize / 2f)),
+                size = Size(noteSize, noteSize)
             )
         }
+    }
 
-        // Accidental Flat ('x')
-        if (note.isFlat) {
-            drawContext.canvas.nativeCanvas.drawText(
-                "♭",
-                curX - (noteSize * 1.1f),
-                noteY + (noteSize * 0.4f),
-                cachedAccidentalPaint
-            )
+    drawDecorations(note, x, y, baseUnit, noteColor)
+}
+
+private fun DrawScope.drawDecorations(
+    note: GabcNote,
+    x: Float,
+    y: Float,
+    baseUnit: Float,
+    noteColor: Color
+) {
+    val noteSize = baseUnit * 0.95f
+
+    // Punctum Mora
+    if (note.hasMora) {
+        drawCircle(
+            color = noteColor,
+            radius = baseUnit * 0.22f,
+            center = Offset(x + noteSize + (baseUnit * 0.45f), y)
+        )
+    }
+
+    // Horizontal Episema
+    if (note.hasEpisema) {
+        drawLine(
+            color = noteColor,
+            start = Offset(x - (baseUnit * 0.1f), y - (noteSize * 0.85f)),
+            end = Offset(x + noteSize + (baseUnit * 0.1f), y - (noteSize * 0.85f)),
+            strokeWidth = baseUnit * 0.2f
+        )
+    }
+
+    // Vertical Episema (Ictus)
+    if (note.hasIctus) {
+        drawLine(
+            color = noteColor,
+            start = Offset(x + (noteSize / 2f), y + (noteSize * 0.6f)),
+            end = Offset(x + (noteSize / 2f), y + (noteSize * 1.2f)),
+            strokeWidth = baseUnit * 0.2f
+        )
+    }
+
+    // Accidental (Flat / Natural / Sharp)
+    if (note.isFlat || note.isNatural || note.isSharp) {
+        drawContext.canvas.nativeCanvas.apply {
+            cachedAccidentalPaint.color = noteColor.toArgb()
+            cachedAccidentalPaint.textSize = baseUnit * 1.5f
+            val accidentalChar = when {
+                note.isFlat -> "♭"
+                note.isNatural -> "♮"
+                else -> "♯"
+            }
+            drawText(accidentalChar, x - (baseUnit * 1.2f), y + (baseUnit * 0.4f), cachedAccidentalPaint)
         }
-
-        curX += noteSize * 1.15f
     }
 }
 
@@ -711,60 +1013,81 @@ private fun DrawScope.drawBarLine(
     x: Float,
     staffTop: Float,
     staffLineSpacing: Float,
-    color: Color,
-    strokeWidth: Float
+    baseUnit: Float,
+    color: Color
 ) {
-    val line1Y = staffTop + (staffLineSpacing * 3) // Bottom line
-    val line2Y = staffTop + (staffLineSpacing * 2)
-    val line3Y = staffTop + staffLineSpacing
-    val line4Y = staffTop // Top line
-
     when (barLine) {
         BarLineType.VIRGULA -> {
             drawLine(
                 color = color,
-                start = Offset(x, line4Y - 4f),
-                end = Offset(x + 4f, line4Y + 8f),
-                strokeWidth = strokeWidth
+                start = Offset(x, staffTop),
+                end = Offset(x, staffTop + (staffLineSpacing * 0.6f)),
+                strokeWidth = baseUnit * 0.25f
             )
         }
         BarLineType.MINIMA -> {
             drawLine(
                 color = color,
-                start = Offset(x, line4Y),
-                end = Offset(x, line3Y),
-                strokeWidth = strokeWidth
+                start = Offset(x, staffTop),
+                end = Offset(x, staffTop + staffLineSpacing),
+                strokeWidth = baseUnit * 0.25f
             )
         }
         BarLineType.MINOR -> {
             drawLine(
                 color = color,
-                start = Offset(x, line3Y),
-                end = Offset(x, line2Y),
-                strokeWidth = strokeWidth
+                start = Offset(x, staffTop + staffLineSpacing),
+                end = Offset(x, staffTop + (staffLineSpacing * 2f)),
+                strokeWidth = baseUnit * 0.25f
             )
         }
         BarLineType.MAIOR -> {
             drawLine(
                 color = color,
-                start = Offset(x, line4Y),
-                end = Offset(x, line1Y),
-                strokeWidth = strokeWidth
+                start = Offset(x, staffTop),
+                end = Offset(x, staffTop + (staffLineSpacing * 3f)),
+                strokeWidth = baseUnit * 0.25f
             )
         }
         BarLineType.FINALIS -> {
             drawLine(
                 color = color,
-                start = Offset(x - 3f, line4Y),
-                end = Offset(x - 3f, line1Y),
-                strokeWidth = strokeWidth
+                start = Offset(x, staffTop),
+                end = Offset(x, staffTop + (staffLineSpacing * 3f)),
+                strokeWidth = baseUnit * 0.25f
             )
             drawLine(
                 color = color,
-                start = Offset(x + 3f, line4Y),
-                end = Offset(x + 3f, line1Y),
-                strokeWidth = strokeWidth * 1.8f
+                start = Offset(x + (baseUnit * 0.5f), staffTop),
+                end = Offset(x + (baseUnit * 0.5f), staffTop + (staffLineSpacing * 3f)),
+                strokeWidth = baseUnit * 0.45f
             )
         }
     }
+}
+
+/**
+ * Draws the Custos (Guidon) indicating the starting pitch of the next line.
+ */
+private fun DrawScope.drawCustos(
+    x: Float,
+    y: Float,
+    baseUnit: Float,
+    color: Color
+) {
+    val size = baseUnit * 0.55f
+    val path = Path().apply {
+        moveTo(x, y)
+        lineTo(x + size, y - (size * 0.6f))
+        lineTo(x + (size * 1.8f), y)
+        lineTo(x + size, y + (size * 0.6f))
+        close()
+    }
+    drawPath(path, color)
+    drawLine(
+        color = color,
+        start = Offset(x + size, y - (size * 0.6f)),
+        end = Offset(x + size, y - (size * 1.6f)),
+        strokeWidth = baseUnit * 0.2f
+    )
 }

@@ -36,12 +36,12 @@ enum class LiturgicalColor(
     val hexColor: Long,
     val textColor: Long = 0xFFFFFFFF
 ) {
-    WHITE("Albus", "Blanc", 0xFFF7F4EB, 0xFF7D1128),
+    WHITE("Albus", "Blanc", 0xFFFFFFFF, 0xFF000000),
     RED("Ruber", "Rouge", 0xFFB71C1C, 0xFFFFFFFF),
-    GREEN("Viridis", "Vert", 0xFF1B5E20, 0xFFFFFFFF),
-    VIOLET("Violaceus", "Violet", 0xFF4A148C, 0xFFFFFFFF),
-    ROSE("Rosaceus", "Rose", 0xFFC2185B, 0xFFFFFFFF),
-    BLACK("Niger", "Noir", 0xFF1A1A1A, 0xFFFFFFFF);
+    GREEN("Viridis", "Vert", 0xFF1A1A1A, 0xFFFFFFFF),
+    VIOLET("Violaceus", "Violet", 0xFF2B2B2B, 0xFFFFFFFF),
+    ROSE("Rosaceus", "Rose", 0xFFB71C1C, 0xFFFFFFFF),
+    BLACK("Niger", "Noir", 0xFF000000, 0xFFFFFFFF);
 
     val composeColor: Color get() = Color(hexColor)
     val composeTextColor: Color get() = Color(textColor)

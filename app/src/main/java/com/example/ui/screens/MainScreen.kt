@@ -40,7 +40,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.ui.theme.LiturgicalGold
 import com.example.ui.theme.RubricRed
 import com.example.ui.viewmodel.AppTab
 import com.example.ui.viewmodel.MainViewModel
@@ -84,7 +83,7 @@ fun MainScreen(
                         Icon(
                             imageVector = Icons.Default.Today,
                             contentDescription = "Aujourd'hui",
-                            tint = LiturgicalGold
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                     }
                     IconButton(
@@ -94,7 +93,7 @@ fun MainScreen(
                         Icon(
                             imageVector = if (showChants) Icons.Default.MusicNote else Icons.Default.MusicOff,
                             contentDescription = "Basculer partitions",
-                            tint = if (showChants) LiturgicalGold else MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = if (showChants) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f)
                         )
                     }
                 },
@@ -160,7 +159,7 @@ fun MainScreen(
                     text = {
                         Text(if (showChants) "Partitions actives" else "Texte seul")
                     },
-                    containerColor = if (showChants) LiturgicalGold else MaterialTheme.colorScheme.surfaceVariant,
+                    containerColor = if (showChants) RubricRed else MaterialTheme.colorScheme.surfaceVariant,
                     contentColor = if (showChants) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.testTag("chant_toggle_fab")
                 )
