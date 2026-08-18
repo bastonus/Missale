@@ -1,0 +1,6 @@
+{
+  "name": "Missale & Breviarium",
+  "description": "Missel et Bréviaire traditionnel 1960 avec calendrier liturgique perpétuel et rendu de partitions grégoriennes GABC.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
