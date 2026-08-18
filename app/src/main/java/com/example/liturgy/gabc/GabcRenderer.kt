@@ -1,6 +1,7 @@
 package com.example.liturgy.gabc
 
-import androidx.compose.animation.AnimatedVisibility
+import android.graphics.Paint
+import android.graphics.Typeface
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
@@ -18,7 +19,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoAwesomeMotion
 import androidx.compose.material.icons.filled.FormatAlignLeft
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.ViewStream
@@ -46,13 +46,26 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlin.math.max
-import kotlin.math.min
+
+/**
+ * Reusable cached paint objects to avoid heap/ashmem allocation overhead during Canvas draw passes.
+ */
+private val cachedTextPaint = Paint().apply {
+    isAntiAlias = true
+    typeface = Typeface.create(Typeface.SERIF, Typeface.NORMAL)
+}
+
+private val cachedAccidentalPaint = Paint().apply {
+    isAntiAlias = true
+    typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+}
 
 /**
  * Represents a single wrapped line of a Gregorian score with its own 4-line staff,
@@ -424,6 +437,14 @@ private fun DrawScope.drawStaffLine(
     // 3. Draw Words, Syllables, Notes, and Bar lines
     val noteSize = baseUnit * 0.82f
 
+    // Configure cached text paint
+    val textColorArgb = textColor.toArgb()
+    cachedTextPaint.color = textColorArgb
+    cachedTextPaint.textSize = 13.5f * zoomScale
+
+    cachedAccidentalPaint.color = noteColor.toArgb()
+    cachedAccidentalPaint.textSize = noteSize * 1.5f
+
     for (word in line.words) {
         for (syllable in word.syllables) {
             val syllableStartX = cursorX
@@ -459,15 +480,12 @@ private fun DrawScope.drawStaffLine(
             // Draw Syllable Text below staff
             if (syllable.text.isNotEmpty()) {
                 val textY = staffTop + (staffLineSpacing * 3) + (20f * zoomScale)
-                drawContext.canvas.nativeCanvas.apply {
-                    val paint = android.graphics.Paint().apply {
-                        color = textColor.hashCode()
-                        textSize = 13.5f * zoomScale
-                        isAntiAlias = true
-                        typeface = android.graphics.Typeface.create(android.graphics.Typeface.SERIF, android.graphics.Typeface.NORMAL)
-                    }
-                    drawText(syllable.text, syllableStartX, textY, paint)
-                }
+                drawContext.canvas.nativeCanvas.drawText(
+                    syllable.text,
+                    syllableStartX,
+                    textY,
+                    cachedTextPaint
+                )
             }
 
             cursorX = max(noteCursorX, syllableStartX + (syllable.text.length * baseUnit * 0.82f)) + (baseUnit * 0.85f)
@@ -674,14 +692,12 @@ private fun DrawScope.drawNeumeCluster(
 
         // Accidental Flat ('x')
         if (note.isFlat) {
-            drawContext.canvas.nativeCanvas.apply {
-                val paint = android.graphics.Paint().apply {
-                    color = noteColor.hashCode()
-                    textSize = noteSize * 1.5f
-                    isAntiAlias = true
-                }
-                drawText("♭", curX - (noteSize * 1.1f), noteY + (noteSize * 0.4f), paint)
-            }
+            drawContext.canvas.nativeCanvas.drawText(
+                "♭",
+                curX - (noteSize * 1.1f),
+                noteY + (noteSize * 0.4f),
+                cachedAccidentalPaint
+            )
         }
 
         curX += noteSize * 1.15f
