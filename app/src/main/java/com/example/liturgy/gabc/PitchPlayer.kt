@@ -85,12 +85,12 @@ object PitchPlayer {
                             .build()
                     )
                     .setBufferSizeInBytes(maxOf(minBufferSize, samples.size * 2))
-                    .setTransferMode(AudioTrack.MODE_STATIC)
+                    .setTransferMode(AudioTrack.MODE_STREAM)
                     .build()
 
                 activeTrack = audioTrack
-                audioTrack.write(samples, 0, samples.size)
                 audioTrack.play()
+                audioTrack.write(samples, 0, samples.size)
 
                 delay(durationMs)
                 stopTone()

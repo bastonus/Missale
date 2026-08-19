@@ -26,6 +26,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.FormatAlignLeft
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Translate
@@ -133,6 +134,8 @@ fun GregorianScoreView(
     var showSvgDialog by remember { mutableStateOf(false) }
     var activePlayingNote by remember { mutableStateOf<String?>(null) }
 
+    var showOptionsMenu by remember { mutableStateOf(false) }
+
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
     val currentStaffColor = if (useRedStaff) GregorianStaffRed else noteColor
@@ -153,221 +156,204 @@ fun GregorianScoreView(
                 .fillMaxWidth()
                 .padding(vertical = 4.dp, horizontal = 2.dp)
         ) {
-            // Header Facture: Propers Modern Style (Office Part, Mode & Biblical Reference)
+            // Header Facture: Solesmes modern_propers.html Style
             val displayTitle = title ?: score.title.ifEmpty { "Chant Grégorien" }
             val parts = displayTitle.split(" - ", limit = 2)
-            val partName = if (parts.size == 2) parts[0] else score.officePart.ifEmpty { "CHANT" }
+            val partName = if (parts.size == 2) parts[0] else score.officePart.ifEmpty { "PROPRIUM" }
             val chantTitle = if (parts.size == 2) parts[1] else displayTitle
             val displayMode = mode ?: score.mode
+            val commentary = score.commentary.ifEmpty { score.book }
 
-            // Top Facture Line: e.g. "INTROITUS. VIII" and "Ps. 24, 1-3"
-            Row(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 2.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(horizontal = 4.dp, vertical = 2.dp)
             ) {
+                // Top Meta Bar: Left (Mode/Office Tag), Center/Right (Commentary/Ref & Actions)
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = partName.uppercase(),
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = RubricRed
-                    )
-                    if (displayMode.isNotEmpty()) {
-                        Text(
-                            text = "• Mode $displayMode",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
-
-                // Scriptural / Biblical Reference (e.g. Ps. 24, 1-3)
-                if (score.commentary.isNotEmpty()) {
-                    Text(
-                        text = score.commentary,
-                        style = MaterialTheme.typography.labelSmall,
-                        fontStyle = FontStyle.Italic,
-                        fontWeight = FontWeight.Medium,
-                        color = RubricRed
-                    )
-                }
-            }
-
-            // Main Chant Title & Book Source
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = chantTitle,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.weight(1f)
-                )
-
-                if (score.book.isNotEmpty()) {
-                    Text(
-                        text = score.book.take(35) + if (score.book.length > 35) "…" else "",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontStyle = FontStyle.Italic,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            // Interactive Tool Bar (Pitch Pipe, Official GABC Code, Color, Wrap, Translation, Zoom)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 4.dp),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Pitch Pipe Tone Generator
-                Box {
-                    IconButton(
-                        onClick = { showPitchMenu = !showPitchMenu },
-                        modifier = Modifier.size(32.dp).testTag("pitch_pipe_button")
+                    // Left Tag: Part abbreviation & Mode numeral (e.g. Intr. VIII)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.VolumeUp,
-                            contentDescription = "Donner le ton",
-                            tint = if (activePlayingNote != null) RubricRed else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-
-                    DropdownMenu(
-                        expanded = showPitchMenu,
-                        onDismissRequest = { showPitchMenu = false }
-                    ) {
-                        Text(
-                            text = "Donneur de ton (Pitch pipe)",
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        PitchPlayer.notes.forEach { (name, freq) ->
-                            DropdownMenuItem(
-                                text = { Text(name) },
-                                onClick = {
-                                    activePlayingNote = name
-                                    PitchPlayer.playTone(freq, 2000) {
-                                        activePlayingNote = null
-                                    }
-                                    showPitchMenu = false
-                                }
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = RubricRed.copy(alpha = 0.12f),
+                            border = androidx.compose.foundation.BorderStroke(0.5.dp, RubricRed.copy(alpha = 0.4f))
+                        ) {
+                            Text(
+                                text = partName.uppercase(),
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = RubricRed
                             )
+                        }
+                        if (displayMode.isNotEmpty()) {
+                            Text(
+                                text = "Ton $displayMode",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    // Right: Actions (Pitch Pipe, Translation toggle, Menu)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        // Pitch Pipe Tone Generator
+                        Box {
+                            IconButton(
+                                onClick = { showPitchMenu = !showPitchMenu },
+                                modifier = Modifier.size(32.dp).testTag("pitch_pipe_button")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.VolumeUp,
+                                    contentDescription = "Donner le ton",
+                                    tint = if (activePlayingNote != null) RubricRed else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+
+                            DropdownMenu(
+                                expanded = showPitchMenu,
+                                onDismissRequest = { showPitchMenu = false }
+                            ) {
+                                Text(
+                                    text = "Donneur de ton (Pitch pipe)",
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                PitchPlayer.notes.forEach { (name, freq) ->
+                                    DropdownMenuItem(
+                                        text = { Text(name) },
+                                        onClick = {
+                                            activePlayingNote = name
+                                            PitchPlayer.playTone(freq, 2000) {
+                                                activePlayingNote = null
+                                            }
+                                            showPitchMenu = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
+                        // Translation Toggle
+                        if (!translation.isNullOrBlank()) {
+                            IconButton(
+                                onClick = { showTranslation = !showTranslation },
+                                modifier = Modifier.size(32.dp).testTag("toggle_translation_button")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Translate,
+                                    contentDescription = "Afficher/masquer traduction",
+                                    tint = if (showTranslation) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+
+                        // Consolidated Overflow Menu
+                        Box {
+                            IconButton(
+                                onClick = { showOptionsMenu = !showOptionsMenu },
+                                modifier = Modifier.size(32.dp).testTag("score_options_menu_button")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.MoreVert,
+                                    contentDescription = "Options de la partition",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+
+                            DropdownMenu(
+                                expanded = showOptionsMenu,
+                                onDismissRequest = { showOptionsMenu = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Copier le code GABC") },
+                                    leadingIcon = { Icon(Icons.Default.Code, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                                    onClick = {
+                                        showOptionsMenu = false
+                                        showGabcDialog = true
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Exporter en SVG") },
+                                    leadingIcon = { Icon(Icons.Default.ViewStream, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                                    onClick = {
+                                        showOptionsMenu = false
+                                        showSvgDialog = true
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(if (useRedStaff) "Portées noires" else "Portées rouges (Solesmes)") },
+                                    leadingIcon = { Icon(Icons.Default.Palette, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                                    onClick = {
+                                        useRedStaff = !useRedStaff
+                                        showOptionsMenu = false
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Agrandir (+)") },
+                                    leadingIcon = { Icon(Icons.Default.ZoomIn, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                                    onClick = {
+                                        zoomScale = (zoomScale + 0.15f).coerceAtMost(1.6f)
+                                        showOptionsMenu = false
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Réduire (-)") },
+                                    leadingIcon = { Icon(Icons.Default.ZoomOut, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                                    onClick = {
+                                        zoomScale = (zoomScale - 0.15f).coerceAtLeast(0.75f)
+                                        showOptionsMenu = false
+                                    }
+                                )
+                            }
                         }
                     }
                 }
 
-                // Official GABC Code Inspector & Copy button
-                IconButton(
-                    onClick = { showGabcDialog = true },
-                    modifier = Modifier.size(32.dp).testTag("view_gabc_code_button")
+                // Centered Chant Title & Biblical Reference (exact modern_propers.html layout)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 2.dp, bottom = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Bottom
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Code,
-                        contentDescription = "Voir le code GABC officiel",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(18.dp)
+                    Text(
+                        text = chantTitle,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f, fill = false)
                     )
-                }
-
-                // Official jgabc SVG Generator & Exporter button
-                IconButton(
-                    onClick = { showSvgDialog = true },
-                    modifier = Modifier.size(32.dp).testTag("view_svg_code_button")
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.ViewStream,
-                        contentDescription = "Voir / Exporter en SVG (jgabc)",
-                        tint = RubricRed,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-
-                // Staff Color Toggle (Red Solesmes / Black)
-                IconButton(
-                    onClick = { useRedStaff = !useRedStaff },
-                    modifier = Modifier.size(32.dp).testTag("toggle_staff_color_button")
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Palette,
-                        contentDescription = "Couleur des portées",
-                        tint = if (useRedStaff) GregorianStaffRed else MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-
-                // Engine Toggle: jgabc (Exsurge SVG) / Compose Canvas
-                IconButton(
-                    onClick = { useExsurgeEngine = !useExsurgeEngine },
-                    modifier = Modifier.size(32.dp).testTag("toggle_engine_button")
-                ) {
-                    Icon(
-                        imageVector = if (useExsurgeEngine) Icons.Default.MusicNote else Icons.Default.Palette,
-                        contentDescription = if (useExsurgeEngine) "Moteur jgabc (Exsurge SVG)" else "Moteur Canvas Natif",
-                        tint = if (useExsurgeEngine) RubricRed else MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-
-                // Translation Toggle
-                if (!translation.isNullOrBlank()) {
-                    IconButton(
-                        onClick = { showTranslation = !showTranslation },
-                        modifier = Modifier.size(32.dp).testTag("toggle_translation_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Translate,
-                            contentDescription = "Afficher/masquer traduction",
-                            tint = if (showTranslation) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(18.dp)
+                    if (commentary.isNotBlank()) {
+                        Text(
+                            text = commentary,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontStyle = FontStyle.Italic,
+                            color = RubricRed,
+                            modifier = Modifier.padding(start = 8.dp)
                         )
                     }
                 }
-
-                // Wrap / Scroll toggle
-                IconButton(
-                    onClick = { wrapLines = !wrapLines },
-                    modifier = Modifier.size(32.dp).testTag("toggle_wrap_button")
-                ) {
-                    Icon(
-                        imageVector = if (wrapLines) Icons.Default.FormatAlignLeft else Icons.Default.ViewStream,
-                        contentDescription = if (wrapLines) "Mode page (portées enveloppées)" else "Mode défilement horizontal",
-                        modifier = Modifier.size(18.dp),
-                        tint = if (wrapLines) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                // Zoom controls
-                IconButton(
-                    onClick = { zoomScale = (zoomScale - 0.15f).coerceAtLeast(0.75f) },
-                    modifier = Modifier.size(32.dp).testTag("zoom_out_button")
-                ) {
-                    Icon(Icons.Default.ZoomOut, contentDescription = "Zoom out", modifier = Modifier.size(18.dp))
-                }
-                IconButton(
-                    onClick = { zoomScale = (zoomScale + 0.15f).coerceAtMost(1.6f) },
-                    modifier = Modifier.size(32.dp).testTag("zoom_in_button")
-                ) {
-                    Icon(Icons.Default.ZoomIn, contentDescription = "Zoom in", modifier = Modifier.size(18.dp))
-                }
             }
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(2.dp))
 
             val density = LocalDensity.current
             val baseUnit = 11.5f * zoomScale

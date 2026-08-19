@@ -3,17 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>Gregorian Chant Viewer (jgabc / exsurge engine)</title>
+  <title>Gregorian Chant Score (jgabc SVG engine)</title>
+  <link rel="stylesheet" type="text/css" href="style.css" />
+  <link rel="stylesheet" type="text/css" href="propers.css" />
   <style>
-    @font-face {
-      font-family: 'Caeciliae';
-      src: url('Caeciliae-Staffless.ttf') format('truetype');
-    }
-    @font-face {
-      font-family: 'Versiculum';
-      src: url('versiculum.ttf') format('truetype');
-    }
-
     * {
       box-sizing: border-box;
     }
@@ -22,21 +15,28 @@
       margin: 0;
       padding: 4px;
       background-color: transparent;
-      font-family: 'Times New Roman', Georgia, serif;
+      font-family: 'Crimson Text', serif;
       color: #111111;
       overflow-x: hidden;
     }
 
+    html.dark-mode,
+    body.dark-mode,
     .dark-mode {
-      color: #E6E1E5;
+      color: #FFFFFF !important;
+    }
+
+    .dark-mode #score-wrapper {
+      color: #FFFFFF !important;
     }
 
     #score-wrapper {
       width: 100%;
       display: flex;
       flex-direction: column;
-      align-items: center;
+      align-items: stretch;
       justify-content: flex-start;
+      margin: 0 auto;
     }
 
     svg {
@@ -45,72 +45,275 @@
       height: auto !important;
       max-width: 100%;
       overflow: visible;
+      margin-bottom: 2px;
     }
 
-    /* Solesmes Gregorian styling */
     .staff-line {
       stroke: #B71C1C;
       stroke-width: 1.2;
     }
 
     .dark-mode .staff-line {
-      stroke: #E57373;
+      stroke: #E57373 !important;
     }
 
     .rubric {
       color: #B71C1C;
       font-weight: bold;
     }
+
+    /* All SVG elements default to crisp white in dark mode */
+    .dark-mode svg {
+      color: #FFFFFF !important;
+      fill: #FFFFFF !important;
+    }
+
+    .dark-mode svg text,
+    .dark-mode svg tspan,
+    .dark-mode svg path:not(.staff-line),
+    .dark-mode svg use,
+    .dark-mode svg g,
+    .dark-mode svg rect,
+    .dark-mode svg circle,
+    .dark-mode svg polygon,
+    .dark-mode svg polyline,
+    .dark-mode defs path,
+    .dark-mode defs g {
+      fill: #FFFFFF !important;
+    }
+
+    .dark-mode svg text.lyric,
+    .dark-mode svg text.annotation,
+    .dark-mode svg text.dropCap:not(.rubric) {
+      fill: #FFFFFF !important;
+      color: #FFFFFF !important;
+    }
+
+    /* Red parts MUST remain red (Solesmes rubric red / coral) */
+    .dark-mode .rubric,
+    .dark-mode .versenum,
+    .dark-mode .versiculum,
+    .dark-mode text.dropCap.rubric,
+    .dark-mode [fill="#B71C1C"],
+    .dark-mode [fill="#b71c1c"],
+    .dark-mode [fill="#d00"],
+    .dark-mode [fill="#D00"],
+    .dark-mode [fill="#f00"],
+    .dark-mode [fill="#F00"],
+    .dark-mode [fill="#e22"],
+    .dark-mode [fill="#E22"],
+    .dark-mode [fill="#E57373"],
+    .dark-mode [fill="#e57373"],
+    .dark-mode [style*="fill:#f00"],
+    .dark-mode [style*="fill:#F00"],
+    .dark-mode [style*="fill:#d00"],
+    .dark-mode [style*="fill:#D00"],
+    .dark-mode [style*="fill:#b71c1c"],
+    .dark-mode [style*="fill:#B71C1C"],
+    .dark-mode [style*="fill:#e57373"],
+    .dark-mode [style*="fill:#E57373"],
+    .dark-mode [style*="fill: #f00"],
+    .dark-mode [style*="fill: #d00"],
+    .dark-mode [style*="fill: #b71c1c"],
+    .dark-mode [style*="fill: #e57373"] {
+      fill: #E57373 !important;
+      color: #E57373 !important;
+    }
+
+    .dark-mode .staff-line,
+    .dark-mode path.staff-line,
+    .dark-mode line.staff-line,
+    .dark-mode [stroke="#B71C1C"],
+    .dark-mode [stroke="#b71c1c"],
+    .dark-mode [stroke="#E57373"],
+    .dark-mode [stroke="#e57373"],
+    .dark-mode [style*="stroke:#b71c1c"],
+    .dark-mode [style*="stroke:#B71C1C"],
+    .dark-mode [style*="stroke:#e57373"],
+    .dark-mode [style*="stroke:#E57373"],
+    .dark-mode [style*="stroke: #b71c1c"],
+    .dark-mode [style*="stroke: #e57373"] {
+      stroke: #E57373 !important;
+    }
   </style>
+  <script src="jquery.min.js"></script>
+  <script src="util.js"></script>
+  <script src="jgabc.js"></script>
   <script src="exsurge.min.js"></script>
 </head>
 <body>
   <div id="score-wrapper"></div>
 
   <script>
-    var ctxt = new exsurge.ChantContext();
+    var ctxt = null;
     var currentScore = null;
     var currentRawGabc = "";
     var currentUseRedStaff = true;
     var currentDarkMode = false;
 
-    function initContext(isDarkMode, useRedStaff) {
+    var romanNumeral = ['','I','II','III','IV','V','VI','VII','VIII'];
+    var partAbbrev = {
+      'introitus': 'Intr.',
+      'graduale': 'Grad.',
+      'alleluia': 'All.',
+      'tractus': 'Tract.',
+      'sequentia': 'Seq.',
+      'offertorium': 'Offert.',
+      'communio': 'Comm.',
+      'antiphona': 'Ant.',
+      'responsorium': 'Resp.',
+      'hymnus': 'Hymn.'
+    };
+
+    function initCtxt(isDarkMode, useRedStaff) {
       currentDarkMode = isDarkMode;
       currentUseRedStaff = useRedStaff;
 
-      if (isDarkMode) {
-        document.body.classList.add('dark-mode');
-        ctxt.textColor = '#E6E1E5';
-        ctxt.staffColor = useRedStaff ? '#E57373' : '#E6E1E5';
-        ctxt.rubricColor = '#E57373';
+      if (typeof makeExsurgeChantContext === 'function') {
+        ctxt = makeExsurgeChantContext();
       } else {
-        document.body.classList.remove('dark-mode');
+        ctxt = new exsurge.ChantContext(exsurge.TextMeasuringStrategy.Canvas);
+        ctxt.condenseLineAmount = 1;
+        ctxt.setGlyphScaling(1/16);
+        ctxt.setFont("'Crimson Text', serif", 19.2 / 0.9);
+        ctxt.spaceBetweenSystems = 0;
+        ctxt.textStyles.dropCap.size = 64;
+        ctxt.textStyles.annotation.size = 12.8;
+      }
+
+      if (isDarkMode) {
+        document.body.className = 'dark-mode';
+        document.documentElement.className = 'dark-mode';
+        ctxt.textColor = '#FFFFFF';
+        ctxt.staffColor = useRedStaff ? '#E57373' : '#FFFFFF';
+        ctxt.staffLineColor = useRedStaff ? '#E57373' : '#FFFFFF';
+        ctxt.dividerLineColor = '#FFFFFF';
+        ctxt.neumeLineColor = '#FFFFFF';
+        if (typeof ctxt.setRubricColor === 'function') {
+          ctxt.setRubricColor('#E57373');
+        }
+      } else {
+        document.body.className = '';
+        document.documentElement.className = '';
         ctxt.textColor = '#111111';
         ctxt.staffColor = useRedStaff ? '#B71C1C' : '#111111';
-        ctxt.rubricColor = '#B71C1C';
+        ctxt.staffLineColor = useRedStaff ? '#B71C1C' : '#111111';
+        ctxt.dividerLineColor = '#111111';
+        ctxt.neumeLineColor = '#111111';
+        if (typeof ctxt.setRubricColor === 'function') {
+          ctxt.setRubricColor('#B71C1C');
+        }
+      }
+      return ctxt;
+    }
+
+    function applyThemeToContainer(container, isDarkMode, useRedStaff) {
+      var noteColor = isDarkMode ? '#FFFFFF' : '#111111';
+      var staffColor = useRedStaff ? (isDarkMode ? '#E57373' : '#B71C1C') : noteColor;
+      var rubricColor = isDarkMode ? '#E57373' : '#B71C1C';
+
+      var redValues = ['#b71c1c', '#e57373', '#d00', '#f00', '#e22', 'rgb(183, 28, 28)', 'rgb(229, 115, 115)', 'rgb(221, 0, 0)', 'rgb(255, 0, 0)'];
+      var isRed = function(val) {
+        if (!val) return false;
+        var s = String(val).toLowerCase().trim();
+        for (var i = 0; i < redValues.length; i++) {
+          if (s.indexOf(redValues[i]) !== -1) return true;
+        }
+        return false;
+      };
+
+      var allElements = container.querySelectorAll('*');
+      for (var i = 0; i < allElements.length; i++) {
+        var el = allElements[i];
+        var tag = el.tagName.toLowerCase();
+        var fill = el.getAttribute('fill') || (el.style ? el.style.fill : '');
+        var stroke = el.getAttribute('stroke') || (el.style ? el.style.stroke : '');
+        var cls = (el.getAttribute('class') || '') + ' ' + (el.className || '');
+
+        var isStaff = cls.indexOf('staff') !== -1 || (tag === 'path' && stroke && isRed(stroke)) || (tag === 'line' && stroke && isRed(stroke));
+        var isRubric = cls.indexOf('rubric') !== -1 || cls.indexOf('vers') !== -1 || isRed(fill) || (isRed(stroke) && !isStaff);
+
+        if (isStaff) {
+          el.setAttribute('stroke', staffColor);
+          if (el.style) el.style.stroke = staffColor;
+        } else if (isRubric) {
+          if (fill !== 'none') {
+            el.setAttribute('fill', rubricColor);
+            if (el.style) el.style.fill = rubricColor;
+          }
+          if (stroke && stroke !== 'none') {
+            el.setAttribute('stroke', rubricColor);
+            if (el.style) el.style.stroke = rubricColor;
+          }
+        } else {
+          if (tag === 'path' || tag === 'text' || tag === 'tspan' || tag === 'use' || tag === 'rect' || tag === 'circle' || tag === 'polygon' || tag === 'polyline') {
+            if (fill !== 'none') {
+              el.setAttribute('fill', noteColor);
+              if (el.style) el.style.fill = noteColor;
+            }
+          }
+          if (stroke && stroke !== 'none' && !isStaff) {
+            el.setAttribute('stroke', noteColor);
+            if (el.style) el.style.stroke = noteColor;
+          }
+        }
       }
     }
 
     function renderScore(gabcString, widthPx, isDarkMode, useRedStaff) {
       if (!gabcString) return;
       currentRawGabc = gabcString;
-      initContext(isDarkMode, useRedStaff);
+      initCtxt(isDarkMode, useRedStaff);
 
       var container = document.getElementById('score-wrapper');
       container.innerHTML = '';
 
       try {
+        var header = typeof GabcHeader === 'function' ? new GabcHeader(gabcString) : null;
+        var hasDropCap = true;
+        if (header && (header['initial-style'] === '0' || header['initial-style'] === 0)) {
+          hasDropCap = false;
+        }
         var mappings = exsurge.Gabc.createMappingsFromSource(ctxt, gabcString);
-        currentScore = new exsurge.ChantScore(ctxt, mappings, true);
-        
+        currentScore = new exsurge.ChantScore(ctxt, mappings, hasDropCap);
+
+        if (header) {
+          var part = (header['office-part'] || '').toLowerCase();
+          var abbrev = partAbbrev[part] || header['office-part'] || '';
+          var modeNum = header.mode ? (romanNumeral[header.mode] || header.mode) : '';
+          
+          if (header.annotation) {
+            currentScore.annotation = new exsurge.Annotations(ctxt, '%' + header.annotation + '%');
+          } else if (abbrev && modeNum) {
+            currentScore.annotation = new exsurge.Annotations(ctxt, '%' + abbrev + '%', '%' + modeNum + '%');
+          } else if (abbrev || modeNum) {
+            currentScore.annotation = new exsurge.Annotations(ctxt, '%' + (abbrev || modeNum) + '%');
+          }
+        }
+
         var effectiveWidth = (widthPx && widthPx > 100) ? (widthPx - 16) : (window.innerWidth - 16);
+        if (effectiveWidth < 200) effectiveWidth = 360;
+        
         currentScore.autoWrap = true;
         currentScore.maxSystemWidth = effectiveWidth;
 
         currentScore.performLayout(ctxt, function() {
           container.innerHTML = '';
-          var svgNode = currentScore.createSvgNode(ctxt);
-          container.appendChild(svgNode);
+          if (typeof currentScore.createSvgNodeForEachLine === 'function') {
+            var svgLines = currentScore.createSvgNodeForEachLine(ctxt);
+            for (var i = 0; i < svgLines.length; i++) {
+              svgLines[i].style.maxWidth = '100%';
+              svgLines[i].style.height = 'auto';
+              svgLines[i].style.display = 'block';
+              svgLines[i].style.margin = '0 auto 4px auto';
+              container.appendChild(svgLines[i]);
+            }
+          } else {
+            var svgNode = currentScore.createSvgNode(ctxt);
+            container.appendChild(svgNode);
+          }
+
+          applyThemeToContainer(container, isDarkMode, useRedStaff);
 
           if (window.AndroidBridge && window.AndroidBridge.onHeightChanged) {
             window.AndroidBridge.onHeightChanged(document.documentElement.scrollHeight);
@@ -118,7 +321,7 @@
         });
       } catch (err) {
         console.error("Exsurge render error:", err);
-        container.innerHTML = '<div style="color:red;padding:8px;">Erreur de rendu grégorien : ' + err.message + '</div>';
+        container.innerHTML = '<div style="color:red;padding:8px;">Erreur de formatage GABC : ' + err.message + '</div>';
       }
     }
 

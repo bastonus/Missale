@@ -1,0 +1,85 @@
+name: Create GitHub Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g. v1.1.0)'
+        required: true
+        default: 'v1.1.0'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build & Publish Release APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Prepare Keystore & Environment
+        run: |
+          if [ -f debug.keystore.base64 ] && [ ! -f debug.keystore ]; then
+            base64 -d debug.keystore.base64 > debug.keystore || true
+          fi
+          if [ ! -f debug.keystore ]; then
+            keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          fi
+          if [ ! -f .env ]; then
+            cp .env.example .env 2>/dev/null || touch .env
+          fi
+
+      - name: Setup Gradle 9.3.1
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.3.1'
+
+      - name: Build Debug & Test
+        run: |
+          gradle :app:testDebugUnitTest --no-daemon
+          gradle :app:assembleDebug --no-daemon
+
+      - name: Prepare Release APK Asset
+        run: |
+          mkdir -p release_assets
+          cp app/build/outputs/apk/debug/app-debug.apk release_assets/Missale-Chant-Gregorien-${{ github.ref_name || github.event.inputs.version }}.apk
+
+      - name: Create GitHub Release & Attach Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name || github.event.inputs.version }}
+          name: "Missale Romanum & Chant Grégorien ${{ github.ref_name || github.event.inputs.version }}"
+          body: |
+            ### 📜 Missale & Breviarium Romanum 1960 — Chant Grégorien
+            
+            #### Nouveautés & Améliorations
+            - **Gravure Grégorienne Solesmes (`modern_propers.html`)** : Partitions SVG officielles avec portées rouges à 4 lignes, lettrines ornées de 64px, annotations liturgiques et références bibliques.
+            - **Mode Sombre haute fidélité** : Rendu des neumes et paroles en blanc éclatant avec conservation des rubriques et portées rouges.
+            - **Donneur de ton (Pitch Pipe)** : Génération sonore intégrée pour donner la note directrice.
+            - **Missel, Bréviaire & Lectures bilingues** (Latin / Français).
+            - **Export GABC & SVG**.
+            
+            #### 📦 Téléchargement direct
+            Téléchargez le fichier APK ci-dessous pour installer l'application sur votre appareil Android.
+          draft: false
+          prerelease: false
+          files: |
+            release_assets/Missale-Chant-Gregorien-${{ github.ref_name || github.event.inputs.version }}.apk
+            app/build/outputs/apk/debug/app-debug.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

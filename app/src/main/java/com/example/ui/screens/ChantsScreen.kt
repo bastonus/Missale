@@ -3,6 +3,7 @@ package com.example.ui.screens
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -16,15 +17,19 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Web
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -34,6 +39,7 @@ import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -50,20 +56,41 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.liturgy.data.JgabcDatabase
+import com.example.liturgy.data.JgabcFeastSet
 import com.example.liturgy.data.KyrialeLibrary
 import com.example.liturgy.data.PropersLibrary
 import com.example.liturgy.gabc.GregorianScoreView
+import com.example.liturgy.gabc.PropersHtmlWebView
 import com.example.ui.theme.RubricRed
 
 @Composable
 fun ChantsScreen(
     modifier: Modifier = Modifier
 ) {
-    var selectedSection by remember { mutableIntStateOf(0) } // 0: Propres de la Messe, 1: Kyriale & Ordinaire, 2: Éditeur GABC officiel
-    val sections = listOf("Propres de la Messe", "Kyriale & Ordinaire", "Éditeur GABC Officiel")
+    var selectedSection by remember { mutableIntStateOf(0) }
+    val sections = listOf(
+        "Propres de la Messe (jgabc)",
+        "Kyriale & Ordinaire",
+        "Éditeur GABC Officiel",
+        "Outil Propers.html"
+    )
+
+    val context = LocalContext.current
+    val clipboardManager = LocalClipboardManager.current
+
+    var allFeasts by remember { mutableStateOf<List<JgabcFeastSet>>(emptyList()) }
+    var isLoadingFeasts by remember { mutableStateOf(true) }
+
+    LaunchedEffect(Unit) {
+        allFeasts = JgabcDatabase.getOrLoadAllFeasts(context)
+        isLoadingFeasts = false
+    }
 
     var selectedProperIndex by remember { mutableIntStateOf(0) }
-    val properSets = PropersLibrary.allSets
+    var searchQuery by remember { mutableStateOf("") }
+    var selectedCycle by remember { mutableStateOf("Tous") }
+    val cycles = listOf("Tous", "Temporale", "Sanctorale", "Communia", "Kyriale")
 
     var selectedCategory by remember { mutableStateOf("Tous") }
     val categories = listOf("Tous", "Asperges", "Kyrie", "Sanctus", "Agnus Dei", "Credo")
@@ -83,8 +110,39 @@ commentary: Ps 50: 9;
         )
     }
 
-    val context = LocalContext.current
-    val clipboardManager = LocalClipboardManager.current
+    val filteredFeasts = remember(allFeasts, searchQuery, selectedCycle) {
+        allFeasts.filter { feast ->
+            val matchCycle = selectedCycle == "Tous" || feast.seasonName.equals(selectedCycle, ignoreCase = true)
+            val matchSearch = searchQuery.isBlank() ||
+                feast.title.contains(searchQuery, ignoreCase = true) ||
+                feast.subtitle.contains(searchQuery, ignoreCase = true) ||
+                feast.key.contains(searchQuery, ignoreCase = true) ||
+                feast.chants.any { it.title.contains(searchQuery, ignoreCase = true) || it.biblicalRef.contains(searchQuery, ignoreCase = true) }
+            matchCycle && matchSearch
+        }
+    }
+
+    if (selectedSection == 3) {
+        // Propers.html webview full experience
+        Column(modifier = modifier.fillMaxSize()) {
+            ScrollableTabRow(
+                selectedTabIndex = selectedSection,
+                edgePadding = 0.dp,
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+            ) {
+                sections.forEachIndexed { index, title ->
+                    Tab(
+                        selected = selectedSection == index,
+                        onClick = { selectedSection = index },
+                        text = { Text(title, fontWeight = if (selectedSection == index) FontWeight.Bold else FontWeight.Normal) },
+                        modifier = Modifier.testTag("chants_tab_$index")
+                    )
+                }
+            }
+            PropersHtmlWebView(modifier = Modifier.weight(1f))
+        }
+        return
+    }
 
     LazyColumn(
         modifier = modifier
@@ -101,14 +159,14 @@ commentary: Ps 50: 9;
                     .padding(vertical = 4.dp, horizontal = 4.dp)
             ) {
                 Text(
-                    text = "Graduale & Kyriale Romanum (GABC Officiel)",
+                    text = "Graduale & Kyriale Romanum (jgabc / propers.html)",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = "Format officiel Gregorio / GregoBase avec en-têtes canoniques, notation Solesmes sur 4 lignes, donneur de ton et éditeur interactif.",
+                    text = "376 formulaires complets du Temporal et Sanctoral avec plus de 1 850 partitions GABC officielles, notations de Solesmes et textes bibliques.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -138,103 +196,276 @@ commentary: Ps 50: 9;
         if (selectedSection == 0) {
             // PROPRES DE LA MESSE (Official GABC format)
             item {
+                // Search bar for all 376 feasts
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = {
+                        searchQuery = it
+                        selectedProperIndex = 0
+                    },
+                    placeholder = { Text("Rechercher une fête, messe ou chant...") },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = RubricRed) },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            androidx.compose.material3.IconButton(onClick = { searchQuery = "" }) {
+                                Icon(Icons.Default.Clear, contentDescription = "Effacer")
+                            }
+                        }
+                    },
+                    singleLine = true,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                        .testTag("feast_search_input")
+                )
+
+                // Cycle Filter Chips (Temporale, Sanctorale, Communia, Kyriale)
                 LazyRow(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 4.dp),
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    items(properSets.indices.toList()) { index ->
-                        val set = properSets[index]
+                    items(cycles) { cycle ->
                         FilterChip(
-                            selected = selectedProperIndex == index,
-                            onClick = { selectedProperIndex = index },
-                            label = { Text(set.feastVernacular.split("(").first().trim()) },
-                            modifier = Modifier.testTag("proper_chip_$index")
+                            selected = selectedCycle == cycle,
+                            onClick = {
+                                selectedCycle = cycle
+                                selectedProperIndex = 0
+                            },
+                            label = { Text(cycle) },
+                            modifier = Modifier.testTag("cycle_chip_$cycle")
                         )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                if (isLoadingFeasts) {
+                    Box(modifier = Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = RubricRed)
+                    }
+                } else if (filteredFeasts.isEmpty()) {
+                    Text(
+                        text = "Aucune fête trouvée pour cette recherche.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(12.dp)
+                    )
+                } else {
+                    // Feasts selector chips
+                    LazyRow(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        itemsIndexed(filteredFeasts) { index, set ->
+                            FilterChip(
+                                selected = selectedProperIndex == index,
+                                onClick = { selectedProperIndex = index },
+                                label = { Text(set.title.split("(").first().trim()) },
+                                modifier = Modifier.testTag("proper_chip_$index")
+                            )
+                        }
                     }
                 }
                 Spacer(modifier = Modifier.height(6.dp))
             }
 
-            val currentSet = properSets[selectedProperIndex]
+            if (filteredFeasts.isNotEmpty()) {
+                val currentFeastIndex = selectedProperIndex.coerceIn(0, filteredFeasts.lastIndex)
+                val currentSet = filteredFeasts[currentFeastIndex]
 
-            item {
-                Text(
-                    text = currentSet.feastLatin,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(vertical = 4.dp, horizontal = 4.dp)
-                )
-            }
-
-            // 1. Introitus
-            item {
-                GregorianScoreView(
-                    rawGabc = currentSet.introit.gabc,
-                    title = "${currentSet.introit.part} - ${currentSet.introit.latinTitle}",
-                    mode = currentSet.introit.mode,
-                    translation = currentSet.introit.translation,
-                    modifier = Modifier.padding(vertical = 4.dp)
-                )
-            }
-
-            // 2. Graduale
-            item {
-                GregorianScoreView(
-                    rawGabc = currentSet.gradual.gabc,
-                    title = "${currentSet.gradual.part} - ${currentSet.gradual.latinTitle}",
-                    mode = currentSet.gradual.mode,
-                    translation = currentSet.gradual.translation,
-                    modifier = Modifier.padding(vertical = 4.dp)
-                )
-            }
-
-            // 3. Alleluia / Tractus
-            item {
-                GregorianScoreView(
-                    rawGabc = currentSet.alleluiaOrTract.gabc,
-                    title = "${currentSet.alleluiaOrTract.part} - ${currentSet.alleluiaOrTract.latinTitle}",
-                    mode = currentSet.alleluiaOrTract.mode,
-                    translation = currentSet.alleluiaOrTract.translation,
-                    modifier = Modifier.padding(vertical = 4.dp)
-                )
-            }
-
-            // 3b. Sequentia (si présente)
-            if (currentSet.sequence != null) {
                 item {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp)) {
+                            Text(
+                                text = currentSet.title,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            if (currentSet.subtitle.isNotBlank()) {
+                                Text(
+                                    text = currentSet.subtitle,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Text(
+                                text = "Cycle : ${currentSet.seasonName} • ${currentSet.chants.size} partitions",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = RubricRed
+                            )
+                        }
+                    }
+                }
+
+                // 1. Collecta / Oraison du jour
+                if (currentSet.collectLatin.isNotBlank()) {
+                    item {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, RubricRed.copy(alpha = 0.25f))
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Text(
+                                    text = "Collecta • Oraison du jour",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = RubricRed
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = currentSet.collectLatin,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                if (currentSet.collectVernacular.isNotBlank()) {
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = currentSet.collectVernacular,
+                                        style = MaterialTheme.typography.bodySmall.copy(fontStyle = androidx.compose.ui.text.font.FontStyle.Italic),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 2. Epistola / Épître du jour
+                if (currentSet.epistleLatin.isNotBlank()) {
+                    item {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f))
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Text(
+                                    text = "Epistola • ${currentSet.epistleRef.ifBlank { "Épître" }}",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = currentSet.epistleLatin,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                if (currentSet.epistleVernacular.isNotBlank()) {
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = currentSet.epistleVernacular,
+                                        style = MaterialTheme.typography.bodySmall.copy(fontStyle = androidx.compose.ui.text.font.FontStyle.Italic),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 3. Render all chants of the selected feast
+                items(currentSet.chants) { chant ->
                     GregorianScoreView(
-                        rawGabc = currentSet.sequence.gabc,
-                        title = "${currentSet.sequence.part} - ${currentSet.sequence.latinTitle}",
-                        mode = currentSet.sequence.mode,
-                        translation = currentSet.sequence.translation,
+                        rawGabc = chant.gabc,
+                        title = "${chant.part} - ${chant.title}",
+                        mode = chant.mode,
+                        translation = chant.biblicalRef,
                         modifier = Modifier.padding(vertical = 4.dp)
                     )
                 }
-            }
 
-            // 4. Offertorium
-            item {
-                GregorianScoreView(
-                    rawGabc = currentSet.offertory.gabc,
-                    title = "${currentSet.offertory.part} - ${currentSet.offertory.latinTitle}",
-                    mode = currentSet.offertory.mode,
-                    translation = currentSet.offertory.translation,
-                    modifier = Modifier.padding(vertical = 4.dp)
-                )
-            }
+                // 4. Evangelium / Saint Évangile du jour
+                if (currentSet.gospelLatin.isNotBlank()) {
+                    item {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, RubricRed.copy(alpha = 0.25f))
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Text(
+                                    text = "Sanctum Evangelium • ${currentSet.gospelRef.ifBlank { "Évangile" }}",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = RubricRed
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = currentSet.gospelLatin,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                if (currentSet.gospelVernacular.isNotBlank()) {
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = currentSet.gospelVernacular,
+                                        style = MaterialTheme.typography.bodySmall.copy(fontStyle = androidx.compose.ui.text.font.FontStyle.Italic),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
 
-            // 5. Communio
-            item {
-                GregorianScoreView(
-                    rawGabc = currentSet.communion.gabc,
-                    title = "${currentSet.communion.part} - ${currentSet.communion.latinTitle}",
-                    mode = currentSet.communion.mode,
-                    translation = currentSet.communion.translation,
-                    modifier = Modifier.padding(vertical = 4.dp)
-                )
+                // 5. Secreta & Postcommunio
+                if (currentSet.secretLatin.isNotBlank() || currentSet.postcommunionLatin.isNotBlank()) {
+                    item {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f))
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                if (currentSet.secretLatin.isNotBlank()) {
+                                    Text(
+                                        text = "Secreta • Prière Secrète",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = RubricRed
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(text = currentSet.secretLatin, style = MaterialTheme.typography.bodySmall)
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                }
+                                if (currentSet.postcommunionLatin.isNotBlank()) {
+                                    Text(
+                                        text = "Postcommunio • Prière de Postcommunion",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = RubricRed
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(text = currentSet.postcommunionLatin, style = MaterialTheme.typography.bodySmall)
+                                }
+                            }
+                        }
+                    }
+                }
             }
         } else if (selectedSection == 1) {
             // KYRIALE & ORDINAIRE (Official GABC format)

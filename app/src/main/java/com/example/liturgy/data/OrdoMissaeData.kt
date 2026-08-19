@@ -178,7 +178,7 @@ object OrdoMissaeData {
         }
 
         // 6. Collecta, Epistola
-        items.add(LiturgicalItem.HeaderSection("Liturgia Verbi", "Liturgie de la Parole"))
+        items.add(LiturgicalItem.HeaderSection("Liturgia Verbi - Collecta (Oratio)", "Liturgie de la Parole - Oraison du Jour"))
         items.add(
             LiturgicalItem.VersicleResponse(
                 versicleLatin = "Dóminus vobíscum.",
@@ -187,13 +187,42 @@ object OrdoMissaeData {
                 responseVernacular = "Et avec votre esprit."
             )
         )
+        
+        val collectLat = propers?.collectLatin?.ifBlank { null }
+            ?: "Orémus.\nDeus, qui hodiérna die per Unigénitum tuum, aeternitátis nobis áditum devícta morte reserásti : vota nostra, quae praeveniéndo aspíras, étiam adjuvándo proséquere. Per eúmdem Dóminum nostrum Jesum Christum Fílium tuum, qui tecum vivit et regnat in unitáte Spíritus Sancti Deus, per ómnia saécula saeculórum. Amen."
+        val collectVern = propers?.collectVernacular?.ifBlank { null }
+            ?: "Prions.\nÔ Dieu, qui en ce jour, par votre Fils unique vainqueur de la mort, nous avez ouvert l'accès de l'éternité, secondez par votre grâce les désirs que vous nous inspirez. Par le même Jésus-Christ, votre Fils, notre Seigneur, qui vit et règne avec vous en l'unité du Saint-Esprit, Dieu, pour tous les siècles des siècles. Amen."
         items.add(
             LiturgicalItem.BilingualText(
-                latin = "Orémus.\nDeus, qui hodiérna die per Unigénitum tuum, aeternitátis nobis áditum devícta morte reserásti : vota nostra, quae praeveniéndo aspíras, étiam adjuvándo proséquere. Per eúmdem Dóminum nostrum Jesum Christum Fílium tuum, qui tecum vivit et regnat in unitáte Spíritus Sancti Deus, per ómnia saécula saeculórum. Amen.",
-                vernacular = "Prions.\nÔ Dieu, qui en ce jour, par votre Fils unique vainqueur de la mort, nous avez ouvert l'accès de l'éternité, secondez par votre grâce les désirs que vous nous inspirez. Par le même Jésus-Christ, votre Fils, notre Seigneur, qui vit et règne avec vous en l'unité du Saint-Esprit, Dieu, pour tous les siècles des siècles. Amen.",
-                speaker = Speaker.CELEBRANT
+                latin = collectLat,
+                vernacular = collectVern,
+                speaker = Speaker.CELEBRANT,
+                dropCap = true
             )
         )
+
+        // Epistola (Reading of the day)
+        if (propers != null && propers.epistleLatin.isNotBlank()) {
+            val epRef = if (propers.epistleRef.isNotBlank()) " (${propers.epistleRef})" else ""
+            items.add(LiturgicalItem.HeaderSection("Epistola$epRef", "Épître du jour$epRef"))
+            items.add(LiturgicalItem.Rubric("Lector vel Subdiaconus cantat Epistolam:"))
+            items.add(
+                LiturgicalItem.BilingualText(
+                    latin = propers.epistleLatin,
+                    vernacular = propers.epistleVernacular.ifBlank { propers.epistleLatin },
+                    speaker = Speaker.LECTOR,
+                    dropCap = true
+                )
+            )
+            items.add(
+                LiturgicalItem.VersicleResponse(
+                    versicleLatin = "Deo grátias.",
+                    versicleVernacular = "Rendons grâces à Dieu.",
+                    responseLatin = "",
+                    responseVernacular = ""
+                )
+            )
+        }
 
         // 7. Propre : Graduale & Alleluia / Tractus / Sequentia
         items.add(LiturgicalItem.HeaderSection("Graduale & Alleluia (Proprium Missae)", "Graduel & Alléluia / Trait / Séquence (Propre)"))
@@ -203,6 +232,44 @@ object OrdoMissaeData {
             if (propers.sequence != null) {
                 items.add(propers.sequence.toLiturgicalItem())
             }
+        }
+
+        // Evangelium (Gospel of the day)
+        if (propers != null && propers.gospelLatin.isNotBlank()) {
+            val gospRef = if (propers.gospelRef.isNotBlank()) " (${propers.gospelRef})" else ""
+            items.add(LiturgicalItem.HeaderSection("Sanctum Evangelium$gospRef", "Saint Évangile du jour$gospRef"))
+            items.add(
+                LiturgicalItem.VersicleResponse(
+                    versicleLatin = "Dóminus vobíscum.",
+                    versicleVernacular = "Le Seigneur soit avec vous.",
+                    responseLatin = "Et cum spíritu tuo.",
+                    responseVernacular = "Et avec votre esprit."
+                )
+            )
+            items.add(
+                LiturgicalItem.VersicleResponse(
+                    versicleLatin = "Sequéntia ✠ sancti Evangélii secúndum ${propers.gospelRef.substringBefore(':').trim()}.",
+                    versicleVernacular = "Suite du saint Évangile selon ${propers.gospelRef.substringBefore(':').trim()}.",
+                    responseLatin = "Glória tibi, Dómine.",
+                    responseVernacular = "Gloire à toi, Seigneur."
+                )
+            )
+            items.add(
+                LiturgicalItem.BilingualText(
+                    latin = propers.gospelLatin,
+                    vernacular = propers.gospelVernacular.ifBlank { propers.gospelLatin },
+                    speaker = Speaker.PRIEST,
+                    dropCap = true
+                )
+            )
+            items.add(
+                LiturgicalItem.VersicleResponse(
+                    versicleLatin = "Laus tibi, Christe.",
+                    versicleVernacular = "Louange à toi, ô Christ.",
+                    responseLatin = "",
+                    responseVernacular = ""
+                )
+            )
         }
 
         // 8. Credo
@@ -231,6 +298,19 @@ object OrdoMissaeData {
                 dropCap = true
             )
         )
+
+        // Secreta (Secret prayer of the day)
+        if (propers != null && propers.secretLatin.isNotBlank()) {
+            items.add(LiturgicalItem.HeaderSection("Secreta (Oratio super oblata)", "Prière Secrète du jour"))
+            items.add(
+                LiturgicalItem.BilingualText(
+                    latin = propers.secretLatin,
+                    vernacular = propers.secretVernacular.ifBlank { propers.secretLatin },
+                    speaker = Speaker.CELEBRANT,
+                    dropCap = true
+                )
+            )
+        }
 
         // 10. Canon Missae
         items.add(LiturgicalItem.HeaderSection("Canon Missae", "Canon de la Messe"))
@@ -289,6 +369,27 @@ object OrdoMissaeData {
         items.add(LiturgicalItem.HeaderSection("Communio (Proprium Missae)", "Communion (Chant du Propre)"))
         if (propers != null) {
             items.add(propers.communion.toLiturgicalItem())
+        }
+
+        // Postcommunio (Postcommunion prayer of the day)
+        if (propers != null && propers.postcommunionLatin.isNotBlank()) {
+            items.add(LiturgicalItem.HeaderSection("Postcommunio (Oratio post communionem)", "Prière de Postcommunion du jour"))
+            items.add(
+                LiturgicalItem.VersicleResponse(
+                    versicleLatin = "Dóminus vobíscum.",
+                    versicleVernacular = "Le Seigneur soit avec vous.",
+                    responseLatin = "Et cum spíritu tuo.",
+                    responseVernacular = "Et avec votre esprit."
+                )
+            )
+            items.add(
+                LiturgicalItem.BilingualText(
+                    latin = "Orémus.\n" + propers.postcommunionLatin,
+                    vernacular = "Prions.\n" + propers.postcommunionVernacular.ifBlank { propers.postcommunionLatin },
+                    speaker = Speaker.CELEBRANT,
+                    dropCap = true
+                )
+            )
         }
 
         // 13. Ultimum Evangelium (St John 1:1-14)

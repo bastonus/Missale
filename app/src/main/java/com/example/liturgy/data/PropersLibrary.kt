@@ -13,7 +13,19 @@ data class ProperSet(
     val alleluiaOrTract: ProperChant,
     val sequence: ProperChant? = null,
     val offertory: ProperChant,
-    val communion: ProperChant
+    val communion: ProperChant,
+    val epistleRef: String = "",
+    val epistleLatin: String = "",
+    val epistleVernacular: String = "",
+    val gospelRef: String = "",
+    val gospelLatin: String = "",
+    val gospelVernacular: String = "",
+    val collectLatin: String = "",
+    val collectVernacular: String = "",
+    val secretLatin: String = "",
+    val secretVernacular: String = "",
+    val postcommunionLatin: String = "",
+    val postcommunionVernacular: String = ""
 )
 
 data class ProperChant(

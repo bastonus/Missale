@@ -24,6 +24,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
@@ -45,7 +46,7 @@ fun ExsurgeChantView(
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
-    val isDark = isSystemInDarkTheme()
+    val isDark = isSystemInDarkTheme() || (MaterialTheme.colorScheme.background.luminance() < 0.5f)
 
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
     var isPageLoaded by remember { mutableStateOf(false) }
@@ -74,7 +75,6 @@ fun ExsurgeChantView(
             factory = { ctx ->
                 WebView(ctx).apply {
                     setBackgroundColor(Color.TRANSPARENT)
-                    setLayerType(WebView.LAYER_TYPE_HARDWARE, null)
 
                     settings.apply {
                         javaScriptEnabled = true
